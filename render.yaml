@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: market-intel-v2
+    runtime: python
+    buildCommand: pip install -r requirements_v2.txt
+    startCommand: gunicorn app_v2:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: MONGO_DB_NAME
+        value: market_intel

@@ -1,0 +1,1821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <script>
+    (function(){try{var t=localStorage.getItem('mi-theme')||'light';document.documentElement.setAttribute('data-theme',t)}catch(e){document.documentElement.setAttribute('data-theme','light')}})();
+  </script>
+  <title>Market Intelligence — Real Estate Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+  <style>
+    :root {
+      --sans: 'Inter', system-ui, sans-serif;
+      --r: 8px;
+      --r2: 12px;
+    }
+    [data-theme="light"] {
+      color-scheme: light;
+      --bg: #f5f7fa;
+      --bg2: #ffffff;
+      --bg3: #f0f2f5;
+      --bg4: #e8ecf1;
+      --border: #e2e8f0;
+      --border2: #cbd5e1;
+      --accent: #4f46e5;
+      --accent2: #4338ca;
+      --accent-bg: rgba(79,70,229,.06);
+      --text: #0f172a;
+      --text2: #1e293b;
+      --muted: #64748b;
+      --subtle: #94a3b8;
+      --shadow-sm: 0 1px 3px rgba(15,23,42,.06);
+      --shadow-md: 0 4px 16px rgba(15,23,42,.1);
+      --shadow-lg: 0 8px 32px rgba(15,23,42,.12);
+      --teal: #0d9488;
+      --green: #16a34a;
+      --blue: #2563eb;
+      --amber: #d97706;
+      --red: #dc2626;
+      --purple: #7c3aed;
+      --nav-bg: #ffffff;
+      --nav-border: #e2e8f0;
+      --dropdown-bg: #ffffff;
+      --card-hover: rgba(79,70,229,.03);
+      --chart-axis: #64748b;
+      --chart-label: #475569;
+      --chart-grid: rgba(203,213,225,.6);
+      --chart-donut-label: #1e293b;
+    }
+    [data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #0c0f1a;
+      --bg2: #151929;
+      --bg3: #1c2236;
+      --bg4: #232a40;
+      --border: rgba(99,120,170,.2);
+      --border2: rgba(99,120,170,.35);
+      --accent: #818cf8;
+      --accent2: #6366f1;
+      --accent-bg: rgba(129,140,248,.08);
+      --text: #e2e8f0;
+      --text2: #cbd5e1;
+      --muted: #94a3b8;
+      --subtle: #64748b;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,.3);
+      --shadow-md: 0 4px 16px rgba(0,0,0,.35);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,.4);
+      --teal: #2dd4bf;
+      --green: #4ade80;
+      --blue: #60a5fa;
+      --amber: #fbbf24;
+      --red: #f87171;
+      --purple: #a78bfa;
+      --nav-bg: #151929;
+      --nav-border: rgba(99,120,170,.2);
+      --dropdown-bg: #1c2236;
+      --card-hover: rgba(129,140,248,.04);
+      --chart-axis: #94a3b8;
+      --chart-label: #cbd5e1;
+      --chart-grid: rgba(99,120,170,.22);
+      --chart-donut-label: #e2e8f0;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{font-size:15px;scroll-behavior:smooth}
+    body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;line-height:1.6;overflow-x:hidden}
+
+    ::-webkit-scrollbar{width:6px;height:6px}
+    ::-webkit-scrollbar-track{background:var(--bg3)}
+    ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+    button{cursor:pointer;font-family:var(--sans)}
+    input,select{font-family:var(--sans)}
+
+    /* ── TOP NAVBAR ── */
+    .navbar{
+      position:sticky;top:0;z-index:1000;
+      background:var(--nav-bg);
+      border-bottom:1px solid var(--nav-border);
+      box-shadow:var(--shadow-sm);
+      padding:0 1.5rem;
+      display:flex;align-items:center;height:56px;gap:0;
+    }
+    .nav-brand{
+      font-size:.95rem;font-weight:800;color:var(--accent);letter-spacing:-.02em;
+      margin-right:2rem;white-space:nowrap;cursor:pointer;
+    }
+    .nav-brand span{color:var(--muted);font-weight:400;font-size:.7rem;margin-left:.4rem}
+
+    /* Nav items & dropdowns */
+    .nav-items{display:flex;align-items:center;gap:0;flex:1}
+    .nav-item{
+      position:relative;padding:.5rem .85rem;font-size:.8rem;font-weight:500;
+      color:var(--muted);cursor:pointer;border-radius:var(--r);
+      transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:.3rem;
+    }
+    .nav-item:hover,.nav-item.open{color:var(--text);background:var(--accent-bg)}
+    .nav-item.active{color:var(--accent);font-weight:600}
+    .nav-item .arrow{font-size:.5rem;transition:transform .2s}
+    .nav-item.open .arrow{transform:rotate(180deg)}
+
+    .nav-dropdown{
+      display:none;position:absolute;top:calc(100% + 4px);left:0;
+      background:var(--dropdown-bg);border:1px solid var(--border);
+      border-radius:var(--r2);box-shadow:var(--shadow-lg);
+      min-width:200px;padding:.4rem;z-index:1001;
+    }
+    .nav-item.open .nav-dropdown{display:block}
+    .nav-dd-item{
+      padding:.55rem .85rem;font-size:.78rem;color:var(--text2);
+      border-radius:var(--r);cursor:pointer;transition:all .12s;
+    }
+    .nav-dd-item:hover{background:var(--accent-bg);color:var(--accent)}
+    .nav-dd-item.active{color:var(--accent);font-weight:600;background:var(--accent-bg)}
+    .nav-dd-desc{font-size:.65rem;color:var(--muted);margin-top:.1rem}
+
+    /* Right side controls */
+    .nav-right{display:flex;align-items:center;gap:.6rem;margin-left:auto}
+
+    .nav-select{
+      background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);
+      padding:.38rem .6rem;color:var(--text);font-size:.78rem;outline:none;cursor:pointer;
+      min-width:100px;
+    }
+    .nav-select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+
+    /* Searchable locality input */
+    .loc-search-wrap{position:relative;min-width:200px}
+    .loc-search{
+      width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);
+      padding:.38rem .6rem .38rem 1.6rem;color:var(--text);font-size:.78rem;outline:none;
+    }
+    .loc-search:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+    .loc-search::placeholder{color:var(--subtle)}
+    .loc-search-icon{position:absolute;left:.5rem;top:50%;transform:translateY(-50%);font-size:.7rem;color:var(--subtle);pointer-events:none}
+    .loc-results{
+      display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:1002;
+      background:var(--dropdown-bg);border:1px solid var(--border);border-radius:var(--r);
+      box-shadow:var(--shadow-lg);max-height:260px;overflow-y:auto;
+    }
+    .loc-results.show{display:block}
+    .loc-result-item{
+      padding:.45rem .7rem;font-size:.75rem;color:var(--text2);cursor:pointer;
+      border-bottom:1px solid var(--border);
+    }
+    .loc-result-item:hover,.loc-result-item.highlighted{background:var(--accent-bg);color:var(--accent)}
+    .loc-result-item:last-child{border-bottom:none}
+    .loc-result-count{padding:.35rem .7rem;font-size:.6rem;color:var(--subtle);text-align:center}
+    .loc-result-match{font-weight:700;color:var(--accent)}
+
+    .reset-btn{
+      width:32px;height:32px;border-radius:50%;border:1px solid var(--border);
+      background:var(--bg3);display:flex;align-items:center;justify-content:center;
+      font-size:.8rem;transition:all .15s;
+    }
+    .reset-btn:hover{border-color:var(--red);color:var(--red);background:rgba(220,38,38,.06)}
+
+    .btn{
+      border:none;border-radius:var(--r);padding:.42rem .9rem;
+      font-size:.75rem;font-weight:600;transition:all .15s;
+    }
+    .btn-primary{background:var(--accent);color:#fff}
+    .btn-primary:hover{background:var(--accent2);box-shadow:0 2px 8px rgba(79,70,229,.3)}
+    .btn-primary:disabled{opacity:.5;cursor:not-allowed}
+    .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
+    .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+    .btn-sm{padding:.3rem .65rem;font-size:.7rem}
+
+    .theme-btn{
+      width:32px;height:32px;border-radius:50%;border:1px solid var(--border);
+      background:var(--bg3);display:flex;align-items:center;justify-content:center;
+      font-size:.85rem;transition:all .15s;
+    }
+    .theme-btn:hover{border-color:var(--accent);background:var(--accent-bg)}
+
+    .badge{
+      display:inline-flex;align-items:center;padding:.15rem .5rem;
+      font-size:.6rem;font-weight:700;border-radius:20px;letter-spacing:.04em;
+    }
+    .badge-ok{background:rgba(13,148,136,.1);color:var(--teal)}
+    .badge-run{background:rgba(37,99,235,.1);color:var(--blue)}
+    .badge-err{background:rgba(220,38,38,.1);color:var(--red)}
+
+    /* ── PROGRESS BAR ── */
+    #prog-bar{
+      position:fixed;top:56px;left:0;height:2px;background:var(--accent);
+      z-index:1001;transition:width .3s;display:none;
+    }
+
+    /* ── CONTENT AREA ── */
+    .content{max-width:1360px;margin:0 auto;padding:1.25rem 1.5rem 3rem}
+
+    .panel{display:none}
+    .panel.active{display:block}
+
+    /* ── CARDS ── */
+    .card{
+      background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);
+      box-shadow:var(--shadow-sm);overflow:hidden;
+    }
+    .card-hd{
+      padding:.65rem .85rem;border-bottom:1px solid var(--border);
+      display:flex;align-items:center;justify-content:space-between;gap:.5rem;
+    }
+    .card-title{font-size:.78rem;font-weight:700;color:var(--text)}
+    .card-badge{font-size:.6rem;color:var(--muted)}
+    .card-body{padding:.75rem .85rem}
+
+    /* Grid layouts */
+    .g2{display:grid;grid-template-columns:1fr 1fr;gap:.85rem}
+    .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.85rem}
+    .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:.85rem}
+    .g23{display:grid;grid-template-columns:2fr 1fr;gap:.85rem}
+
+    /* ── KPI ROW ── */
+    .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:.75rem;margin-bottom:1rem}
+    .kpi{
+      background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);
+      padding:.85rem 1rem;transition:all .15s;
+    }
+    .kpi:hover{border-color:var(--accent);box-shadow:var(--shadow-md)}
+    .kpi-val{font-size:1.5rem;font-weight:800;color:var(--accent);line-height:1.2}
+    .kpi-label{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:.15rem}
+    .kpi-sub{font-size:.6rem;color:var(--subtle);margin-top:.1rem}
+
+    /* ── AI SUMMARY ── */
+    .ai-card{
+      background:linear-gradient(135deg,var(--accent-bg),rgba(13,148,136,.03));
+      border:1px solid rgba(79,70,229,.12);border-radius:var(--r2);
+      padding:1rem 1.25rem;margin-bottom:1rem;
+    }
+    .ai-label{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--accent)}
+    .ai-text{font-size:.82rem;color:var(--text2);line-height:1.7;margin-top:.4rem}
+
+    /* ── TABLE ── */
+    .tbl-wrap{overflow-x:auto}
+    .tbl{width:100%;border-collapse:collapse;font-size:.75rem}
+    .tbl th{
+      background:var(--bg3);padding:.55rem .65rem;text-align:left;
+      font-size:.6rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+      font-weight:600;white-space:nowrap;position:sticky;top:0;
+    }
+    .tbl td{padding:.5rem .65rem;border-bottom:1px solid var(--border);vertical-align:top}
+    .tbl tr:hover td{background:var(--card-hover)}
+    .tbl .name{font-weight:600;color:var(--text);cursor:pointer}
+    .tbl .name:hover{color:var(--accent)}
+    .status-pill{
+      display:inline-block;padding:.15rem .45rem;border-radius:20px;
+      font-size:.6rem;font-weight:600;white-space:nowrap;
+    }
+
+    /* ── FILTER BAR ── */
+    .filter-bar{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.65rem}
+    .f-search{
+      flex:1;min-width:180px;background:var(--bg3);border:1px solid var(--border);
+      border-radius:var(--r);padding:.42rem .7rem;color:var(--text);font-size:.78rem;outline:none;
+    }
+    .f-search:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+    .f-search::placeholder{color:var(--subtle)}
+    .f-select{
+      background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);
+      padding:.38rem .55rem;color:var(--text);font-size:.73rem;outline:none;cursor:pointer;
+    }
+    .f-count{font-size:.65rem;color:var(--muted)}
+
+    /* ── MULTI-SELECT ── */
+    .ms-wrap{position:relative}
+    .ms-trigger{
+      display:flex;align-items:center;gap:.3rem;padding:.38rem .6rem;
+      background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);
+      cursor:pointer;font-size:.73rem;color:var(--text);white-space:nowrap;
+    }
+    .ms-trigger:hover{border-color:var(--accent)}
+    .ms-badge{background:var(--accent);color:#fff;border-radius:10px;font-size:.55rem;padding:.05rem .35rem;font-weight:700}
+    .ms-arrow{font-size:.45rem;color:var(--muted)}
+    .ms-dropdown{
+      display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:100;
+      background:var(--dropdown-bg);border:1px solid var(--border);border-radius:var(--r);
+      box-shadow:var(--shadow-lg);min-width:160px;padding:.3rem;
+    }
+    .ms-wrap.open .ms-dropdown{display:block}
+    .ms-option{
+      padding:.4rem .6rem;font-size:.73rem;cursor:pointer;border-radius:4px;
+      display:flex;align-items:center;gap:.4rem;color:var(--text2);
+    }
+    .ms-option:hover{background:var(--accent-bg)}
+    .ms-option.selected .ms-check{background:var(--accent);border-color:var(--accent)}
+    .ms-option.selected .ms-check::after{content:'✓';color:#fff;font-size:.5rem}
+    .ms-check{
+      width:14px;height:14px;border:1.5px solid var(--border2);border-radius:3px;
+      display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    }
+    .ms-clear{padding:.35rem .6rem;font-size:.65rem;color:var(--subtle);cursor:pointer;text-align:center}
+    .ms-clear:hover{color:var(--red)}
+
+    /* ── MAP ── */
+    #map-main{height:420px;border-radius:var(--r2);z-index:1;position:relative}
+    #map-infra{height:380px;border-radius:var(--r);z-index:1}
+
+    .map-mode-bar{display:flex;gap:.3rem;margin-bottom:.5rem}
+    .map-mode-btn{
+      padding:.3rem .65rem;font-size:.65rem;font-weight:600;border:1px solid var(--border);
+      border-radius:var(--r);background:transparent;color:var(--muted);transition:all .15s;
+    }
+    .map-mode-btn.active,.map-mode-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+    /* ── INFRA CARDS ── */
+    .infra-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.65rem;margin-bottom:1rem}
+    .infra-card{
+      background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);
+      padding:.7rem .85rem;cursor:pointer;transition:all .15s;display:flex;gap:.65rem;align-items:flex-start;
+    }
+    .infra-card:hover,.infra-card.active{border-color:var(--accent);box-shadow:var(--shadow-md)}
+    .infra-icon{font-size:1.4rem}
+    .infra-type{font-size:.55rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+    .infra-name{font-size:.78rem;font-weight:600;color:var(--text);margin:.1rem 0}
+    .infra-dist{font-size:.72rem;font-weight:700}
+    .infra-dist.ig{color:var(--teal)}
+    .infra-dist.io{color:var(--amber)}
+    .infra-dist.ifar{color:var(--red)}
+    .infra-cnt{font-size:.6rem;color:var(--muted)}
+
+    /* ── NEWS ── */
+    .news-item{
+      padding:.85rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;
+    }
+    .news-item:hover{background:var(--card-hover)}
+    .news-title{font-size:.82rem;font-weight:600;color:var(--text);line-height:1.4}
+    .news-desc{font-size:.72rem;color:var(--muted);margin-top:.2rem;line-height:1.5}
+    .news-meta{display:flex;gap:.5rem;margin-top:.35rem;font-size:.6rem;color:var(--subtle)}
+
+    /* ── DIST BARS ── */
+    .dist-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem}
+    .dist-label{font-size:.72rem;color:var(--text2);min-width:100px}
+    .dist-track{flex:1;height:5px;background:var(--bg4);border-radius:3px;overflow:hidden}
+    .dist-fill{height:100%;border-radius:3px;transition:width .4s}
+    .dist-pct{font-size:.62rem;color:var(--muted);font-weight:600;min-width:24px;text-align:right}
+
+    /* ── DETAIL PANEL ── */
+    #detail-panel{
+      position:fixed;right:-420px;top:0;bottom:0;width:400px;
+      background:var(--bg2);border-left:1px solid var(--border);box-shadow:var(--shadow-lg);
+      z-index:1002;transition:right .25s ease;overflow-y:auto;
+    }
+    #detail-panel.open{right:0}
+    .dp-close{
+      position:absolute;top:.7rem;right:.7rem;background:var(--bg3);border:1px solid var(--border);
+      border-radius:var(--r);padding:.3rem .6rem;font-size:.7rem;color:var(--muted);cursor:pointer;
+    }
+    .dp-close:hover{color:var(--red);border-color:var(--red)}
+    .dp-hd{padding:1.2rem 1rem .8rem;border-bottom:1px solid var(--border)}
+    .dp-section{padding:.8rem 1rem;border-bottom:1px solid var(--border)}
+    .dp-section-lbl{font-size:.55rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.5rem;font-weight:600}
+    .dp-row{display:flex;justify-content:space-between;padding:.25rem 0;font-size:.75rem}
+    .dp-key{color:var(--muted)}
+    .dp-val{font-weight:600;color:var(--text)}
+
+    /* ── TOAST ── */
+    #toast{
+      position:fixed;bottom:-60px;left:50%;transform:translateX(-50%);
+      background:var(--text);color:var(--bg);padding:.6rem 1.2rem;
+      border-radius:var(--r2);font-size:.78rem;font-weight:500;z-index:2000;
+      transition:bottom .3s;box-shadow:var(--shadow-lg);
+    }
+    #toast.show{bottom:24px}
+    #toast.err{background:var(--red)}
+
+    /* ── EMPTY STATE ── */
+    .empty{text-align:center;padding:2rem;color:var(--muted);font-size:.78rem}
+
+    /* ── ANIMATIONS ── */
+    .anim{animation:fadeUp .35s ease both}
+    .d1{animation-delay:.1s}.d2{animation-delay:.2s}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+    /* ── RESPONSIVE ── */
+    @media(max-width:768px){
+      .navbar{padding:0 .75rem}
+      .content{padding:1rem .75rem}
+      .g2,.g3,.g4,.g23{grid-template-columns:1fr}
+      .kpi-row{grid-template-columns:1fr 1fr}
+      .nav-brand span{display:none}
+      #detail-panel{width:100%;right:-100%}
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══ TOP NAVIGATION ═══ -->
+  <nav class="navbar">
+    <div class="nav-brand" onclick="switchPanel('overview')">Market Intelligence<span>v2</span></div>
+
+    <div class="nav-items">
+      <!-- Analysis dropdown -->
+      <div class="nav-item" id="nav-analysis" onclick="toggleNavDropdown('analysis')">
+        📊 Analysis <span class="arrow">▾</span>
+        <div class="nav-dropdown">
+          <div class="nav-dd-item active" onclick="switchPanel('overview');event.stopPropagation()">
+            <div>Overview</div>
+            <div class="nav-dd-desc">KPIs, charts, and map</div>
+          </div>
+          <div class="nav-dd-item" onclick="switchPanel('supply');event.stopPropagation()">
+            <div>Supply Intel</div>
+            <div class="nav-dd-desc">Projects, inventory & filters</div>
+          </div>
+          <div class="nav-dd-item" onclick="switchPanel('project-intel');event.stopPropagation()">
+            <div>Project Intel</div>
+            <div class="nav-dd-desc">Developer rankings & lifecycle</div>
+          </div>
+          <div class="nav-dd-item" onclick="switchPanel('pricing');event.stopPropagation()">
+            <div>Pricing Intel</div>
+            <div class="nav-dd-desc">PSF benchmarks & comparisons</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Infrastructure -->
+      <div class="nav-item" onclick="switchPanel('infra')">🏗 Infrastructure</div>
+
+      <!-- Intelligence dropdown -->
+      <div class="nav-item" id="nav-intelligence" onclick="toggleNavDropdown('intelligence')">
+        🔍 Intelligence <span class="arrow">▾</span>
+        <div class="nav-dropdown">
+          <div class="nav-dd-item" onclick="switchPanel('news');event.stopPropagation()">
+            <div>Market News</div>
+            <div class="nav-dd-desc">Live headlines & trends</div>
+          </div>
+          <div class="nav-dd-item" onclick="switchPanel('loc-intel');event.stopPropagation()">
+            <div>Locality Intel</div>
+            <div class="nav-dd-desc">Micro-market deep dive</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reports -->
+      <div class="nav-item" onclick="switchPanel('reports')">📋 Reports</div>
+    </div>
+
+    <div class="nav-right">
+      <select class="nav-select" id="sel-city" onchange="onCityChange()"></select>
+      <div class="loc-search-wrap">
+        <span class="loc-search-icon">🔍</span>
+        <input type="text" class="loc-search" id="loc-search" placeholder="Search locality…" autocomplete="off"
+          oninput="onLocSearchInput()" onfocus="onLocSearchInput()" />
+        <input type="hidden" id="sel-loc" value="" />
+        <div class="loc-results" id="loc-results"></div>
+      </div>
+      <button class="btn btn-primary" id="btn-load" onclick="loadData()">Load Data</button>
+      <button class="reset-btn" id="btn-reset" onclick="resetAll()" title="Reset all filters">↻</button>
+      <span class="badge badge-ok" id="tb-badge">READY</span>
+      <button class="theme-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">☀</button>
+      <button class="btn btn-ghost btn-sm" onclick="doLogout()" title="Sign out">Sign Out</button>
+    </div>
+  </nav>
+
+  <div id="prog-bar"></div>
+
+  <!-- ═══ CONTENT ═══ -->
+  <div class="content">
+
+    <!-- ── OVERVIEW ── -->
+    <div class="panel active" id="panel-overview">
+      <div class="ai-card anim">
+        <div class="ai-label">Market Intelligence Summary</div>
+        <div class="ai-text" id="ai-text">Select a locality and click <strong>Load Data</strong> to generate a market summary.</div>
+      </div>
+
+      <div class="kpi-row anim d1">
+        <div class="kpi"><div class="kpi-val" id="kv-total">—</div><div class="kpi-label">Projects</div></div>
+        <div class="kpi"><div class="kpi-val" id="kv-psf">—</div><div class="kpi-label">Avg PSF</div><div class="kpi-sub" id="ks-psf"></div></div>
+        <div class="kpi"><div class="kpi-val" id="kv-units">—</div><div class="kpi-label">Total Units</div></div>
+        <div class="kpi"><div class="kpi-val" id="kv-gated">—</div><div class="kpi-label">Gated Communities</div><div class="kpi-sub" id="ks-gated"></div></div>
+        <div class="kpi"><div class="kpi-val" id="kv-abs">—</div><div class="kpi-label">Absorption Rate</div><div class="kpi-sub" id="ks-abs"></div></div>
+        <div class="kpi"><div class="kpi-val" id="kv-rera">—</div><div class="kpi-label">RERA Registered</div></div>
+        <div class="kpi"><div class="kpi-val" id="kv-devs">—</div><div class="kpi-label">Active Developers</div><div class="kpi-sub" id="ks-devs"></div></div>
+        <div class="kpi"><div class="kpi-val" id="kv-nl">—</div><div class="kpi-label">New Launches</div></div>
+      </div>
+
+      <div class="g2 anim d2" style="margin-bottom:.85rem">
+        <div class="card">
+          <div class="card-hd"><span class="card-title">Segment Distribution</span><span class="card-badge" id="seg-badge"></span></div>
+          <div class="card-body"><div id="chart-segment" style="height:260px"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><span class="card-title">Status Distribution</span></div>
+          <div class="card-body"><div id="chart-status" style="height:260px"></div></div>
+        </div>
+      </div>
+      <div class="g2 anim d2" style="margin-bottom:.85rem">
+        <div class="card">
+          <div class="card-hd"><span class="card-title">Price Distribution</span></div>
+          <div class="card-body"><div id="chart-price" style="height:260px"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><span class="card-title">BHK Distribution</span></div>
+          <div class="card-body"><div id="chart-bhk" style="height:260px"></div></div>
+        </div>
+      </div>
+
+      <!-- Map -->
+      <div class="card anim d2">
+        <div class="card-hd">
+          <span class="card-title">Project Map</span>
+          <div class="map-mode-bar" style="margin:0">
+            <button class="map-mode-btn active" id="map-mode-supply" onclick="setMapMode('supply',this)">Supply</button>
+            <button class="map-mode-btn" id="map-mode-price" onclick="setMapMode('price',this)">Price Heat</button>
+          </div>
+        </div>
+        <div class="card-body" style="padding:.5rem"><div id="map-main"></div></div>
+      </div>
+    </div>
+
+    <!-- ── SUPPLY INTEL ── -->
+    <div class="panel" id="panel-supply">
+      <!-- Summary KPIs -->
+      <div class="kpi-row anim" id="supply-kpi-row" style="margin-bottom:.85rem">
+        <div class="kpi"><div class="kpi-val" id="si-total">—</div><div class="kpi-label">Total Projects</div></div>
+        <div class="kpi"><div class="kpi-val" id="si-uc">—</div><div class="kpi-label">Under Construction</div></div>
+        <div class="kpi"><div class="kpi-val" id="si-rtm">—</div><div class="kpi-label">Ready to Move</div></div>
+        <div class="kpi"><div class="kpi-val" id="si-nl">—</div><div class="kpi-label">New Launches</div></div>
+        <div class="kpi"><div class="kpi-val" id="si-avg-units">—</div><div class="kpi-label">Avg Units/Project</div></div>
+      </div>
+      <div class="g3 anim" style="margin-bottom:.85rem">
+        <div class="card">
+          <div class="card-hd"><span class="card-title">Inventory Status</span></div>
+          <div class="card-body"><div id="chart-inv-status" style="height:220px"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><span class="card-title">Price Segments</span></div>
+          <div class="card-body" id="supply-price-seg"><div class="empty">No data</div></div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><span class="card-title">Supply Mix (BHK)</span></div>
+          <div class="card-body" id="supply-mix-body"><div class="empty">No data</div></div>
+        </div>
+      </div>
+      <div class="g2 anim d1" style="margin-bottom:.85rem">
+        <div class="card">
+          <div class="card-hd"><span class="card-title">Segment Breakdown</span></div>
+          <div class="card-body"><div id="chart-supply-seg" style="height:220px"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><span class="card-title">Top Localities</span><span class="card-badge">by project count</span></div>
+          <div class="card-body" id="supply-top-loc"><div class="empty">No data</div></div>
+        </div>
+      </div>
+
+      <div class="card anim d1">
+        <div class="card-hd">
+          <span class="card-title">All Projects</span>
+          <span class="card-badge" id="supply-count">0 projects</span>
+        </div>
+        <div class="card-body" style="padding:.65rem">
+          <div class="filter-bar">
+            <input type="text" class="f-search" id="f-search" placeholder="Search project, developer, locality…" oninput="filterProjects()"/>
+            <div class="ms-wrap" id="ms-wrap-status">
+              <div class="ms-trigger" onclick="toggleMs('status')"><span id="ms-label-status">Status</span><span class="ms-badge" id="ms-badge-status" style="display:none">0</span><span class="ms-arrow">▼</span></div>
+              <div class="ms-dropdown" id="ms-dropdown-status">
+                <div class="ms-option" data-val="New Launch" onclick="toggleMsOption('status','New Launch')"><span class="ms-check"></span>New Launch</div>
+                <div class="ms-option" data-val="Ready to Move" onclick="toggleMsOption('status','Ready to Move')"><span class="ms-check"></span>Ready to Move</div>
+                <div class="ms-option" data-val="Under Construction" onclick="toggleMsOption('status','Under Construction')"><span class="ms-check"></span>Under Construction</div>
+                <div class="ms-option" data-val="Pre Launch" onclick="toggleMsOption('status','Pre Launch')"><span class="ms-check"></span>Pre Launch</div>
+                <div class="ms-clear" onclick="clearMs('status')">✕ Clear</div>
+              </div>
+            </div>
+            <div class="ms-wrap" id="ms-wrap-segment">
+              <div class="ms-trigger" onclick="toggleMs('segment')"><span id="ms-label-segment">Segment</span><span class="ms-badge" id="ms-badge-segment" style="display:none">0</span><span class="ms-arrow">▼</span></div>
+              <div class="ms-dropdown" id="ms-dropdown-segment">
+                <div class="ms-option" data-val="Gated Community" onclick="toggleMsOption('segment','Gated Community')"><span class="ms-check"></span>Gated Community</div>
+                <div class="ms-option" data-val="Villa" onclick="toggleMsOption('segment','Villa')"><span class="ms-check"></span>Villa</div>
+                <div class="ms-option" data-val="Standalone" onclick="toggleMsOption('segment','Standalone')"><span class="ms-check"></span>Standalone</div>
+                <div class="ms-clear" onclick="clearMs('segment')">✕ Clear</div>
+              </div>
+            </div>
+            <select class="f-select" id="f-sort" onchange="filterProjects()">
+              <option value="name">Sort: Name</option>
+              <option value="price_asc">Price ↑</option>
+              <option value="price_desc">Price ↓</option>
+              <option value="psf_desc">PSF ↓</option>
+              <option value="absorption">Absorption ↓</option>
+            </select>
+            <span class="f-count" id="f-count">—</span>
+          </div>
+          <div class="tbl-wrap" style="max-height:600px;overflow-y:auto">
+            <table class="tbl">
+              <thead><tr><th>Project</th><th>Developer</th><th>Segment</th><th>Status</th><th>₹/sqft</th><th>Price Range</th><th>BHK</th><th>Units</th><th>Absorption</th><th>RERA</th></tr></thead>
+              <tbody id="proj-tbody"><tr><td colspan="10" class="empty">Load a locality to see projects</td></tr></tbody>
+            </table>
+          </div>
+          <div id="supply-pagination" style="display:none;align-items:center;justify-content:space-between;padding:.6rem 0;gap:.75rem;flex-wrap:wrap">
+            <span id="supply-page-info" style="font-size:.72rem;color:var(--muted)"></span>
+            <div style="display:flex;gap:.5rem">
+              <button class="btn btn-ghost btn-sm" id="btn-prev-page" onclick="loadSupplyPage(_supplyPage-1)" disabled>← Prev</button>
+              <button class="btn btn-ghost btn-sm" id="btn-next-page" onclick="loadSupplyPage(_supplyPage+1)" disabled>Next →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PROJECT INTEL ── -->
+    <div class="panel" id="panel-project-intel">
+      <div class="g2 anim" style="margin-bottom:.85rem">
+        <div class="card">
+          <div class="card-hd"><span class="card-title">Top Developers</span><span class="card-badge" id="dev-badge">by project count</span></div>
+          <div class="card-body"><div id="chart-dev-bar" style="height:360px"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><span class="card-title">Developer Market Share</span></div>
+          <div class="card-body"><div id="chart-dev-pie" style="height:360px"></div></div>
+        </div>
+      </div>
+      <div class="card anim d1">
+        <div class="card-hd"><span class="card-title">Project Lifecycle</span><span class="card-badge">Status × Segment</span></div>
+        <div class="card-body"><div id="chart-lifecycle" style="height:320px"></div></div>
+      </div>
+    </div>
+
+    <!-- ── PRICING INTEL ── -->
+    <div class="panel" id="panel-pricing">
+      <div class="kpi-row anim" style="margin-bottom:.85rem">
+        <div class="kpi"><div class="kpi-val" id="pi-market-psf">—</div><div class="kpi-label">Market Avg PSF</div></div>
+        <div class="kpi"><div class="kpi-val" id="pi-psf-min">—</div><div class="kpi-label">Min PSF</div></div>
+        <div class="kpi"><div class="kpi-val" id="pi-psf-max">—</div><div class="kpi-label">Max PSF</div></div>
+        <div class="kpi"><div class="kpi-val" id="pi-median-psf">—</div><div class="kpi-label">Median PSF</div></div>
+        <div class="kpi"><div class="kpi-val" id="pi-spread">—</div><div class="kpi-label">Price Spread</div><div class="kpi-sub" id="pi-spread-sub"></div></div>
+      </div>
+      <div class="g2 anim d1" style="margin-bottom:.85rem">
+        <div class="card">
+          <div class="card-hd"><span class="card-title">Developer Price Comparison</span></div>
+          <div class="card-body"><div id="chart-pricing-comp" style="height:360px"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><span class="card-title">PSF by Segment</span></div>
+          <div class="card-body"><div id="chart-psf-segment" style="height:360px"></div></div>
+        </div>
+      </div>
+      <div class="g2 anim d2" style="margin-bottom:.85rem">
+        <div class="card">
+          <div class="card-hd"><span class="card-title">Price Histogram</span><span class="card-badge">₹/sqft distribution</span></div>
+          <div class="card-body"><div id="chart-price-hist" style="height:280px"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><span class="card-title">Price Band & Benchmarks</span></div>
+          <div class="card-body" id="pi-band"><div class="empty">No data</div></div>
+        </div>
+      </div>
+      <div class="card anim d2">
+        <div class="card-hd"><span class="card-title">Top Projects by PSF</span><span class="card-badge">highest ₹/sqft</span></div>
+        <div class="card-body" style="max-height:350px;overflow-y:auto" id="pi-top-projects"><div class="empty">No data</div></div>
+      </div>
+    </div>
+
+    <!-- ── INFRASTRUCTURE ── -->
+    <div class="panel" id="panel-infra">
+      <div id="inf-empty" style="text-align:center;padding:3rem 1rem;color:var(--muted)">
+        <div style="font-size:2rem;opacity:.3">🏗</div>
+        <div style="font-size:.82rem;margin-top:.5rem">Infrastructure data not loaded</div>
+        <div style="font-size:.72rem;opacity:.7">Select a locality and click <strong style="color:var(--accent)">Load Data</strong></div>
+      </div>
+      <div id="inf-results" style="display:none">
+        <div class="g23 anim">
+          <div class="card">
+            <div class="card-hd"><span class="card-title">Nearby Amenities Map</span><span class="card-badge" style="color:var(--teal)">click card to toggle layer</span></div>
+            <div class="card-body" style="padding:.5rem"><div id="map-infra"></div></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:.85rem">
+            <div class="card">
+              <div class="card-hd"><span class="card-title">Infrastructure Radar</span></div>
+              <div class="card-body"><div id="chart-infra-radar" style="height:280px"></div></div>
+            </div>
+            <div class="card">
+              <div class="card-hd"><span class="card-title">Connectivity Score</span></div>
+              <div class="card-body" id="connectivity-score"><div class="empty">No data</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="g2 anim d1" style="margin-top:.85rem">
+          <div class="card">
+            <div class="card-hd"><span class="card-title">Nearest Amenities</span></div>
+            <div class="card-body" style="max-height:400px;overflow-y:auto">
+              <div id="metro-list" style="margin-bottom:.65rem"></div>
+              <div id="hospital-list" style="margin-bottom:.65rem"></div>
+              <div id="school-list" style="margin-bottom:.65rem"></div>
+              <div id="it-list" style="margin-bottom:.65rem"></div>
+              <div id="park-list" style="margin-bottom:.65rem"></div>
+              <div id="bank-list"></div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:.85rem">
+            <div class="card">
+              <div class="card-hd"><span class="card-title">Lakes & Buffer Zones</span></div>
+              <div class="card-body" id="lakes-body"><div class="empty">No data</div></div>
+              <div id="lake-alert-box"></div>
+            </div>
+            <div class="card">
+              <div class="card-hd"><span class="card-title">Nearby Places</span><span class="card-badge" id="poi-badge">cafes · restaurants · pharmacies</span></div>
+              <div class="card-body" style="max-height:260px;overflow-y:auto" id="nearby-places-body"><div class="empty">No data</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── NEWS ── -->
+    <div class="panel" id="panel-news">
+      <div class="card anim">
+        <div class="card-hd"><span class="card-title">Market News</span><span class="badge badge-ok">LIVE</span></div>
+        <div id="news-list"><div class="empty">Loading news…</div></div>
+      </div>
+    </div>
+
+    <!-- ── LOCALITY INTEL ── -->
+    <div class="panel" id="panel-loc-intel">
+      <div id="loc-intel-body"><div class="empty">Select a locality to see intelligence data</div></div>
+    </div>
+
+    <!-- ── REPORTS & EXPORT ── -->
+    <div class="panel" id="panel-reports">
+      <div class="g2 anim">
+        <div class="card">
+          <div class="card-hd"><span class="card-title">PDF Report</span></div>
+          <div class="card-body">
+            <p style="font-size:.78rem;color:var(--muted);margin-bottom:.85rem;line-height:1.6">Generate a print-ready HTML report. Opens in browser → Print → Save as PDF.</p>
+            <button class="btn btn-primary" onclick="generateReport()">Generate PDF Report</button>
+            <span id="pdf-status" style="margin-left:.75rem;font-size:.72rem;color:var(--muted)">Select a locality first</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><span class="card-title">Data Export</span></div>
+          <div class="card-body">
+            <p style="font-size:.78rem;color:var(--muted);margin-bottom:.85rem;line-height:1.6">Export all project data as CSV for further analysis in Excel or BI tools.</p>
+            <button class="btn btn-ghost" onclick="exportCSV()">Export CSV</button>
+          </div>
+        </div>
+      </div>
+      <div class="card anim d1" style="margin-top:.85rem">
+        <div class="card-hd"><span class="card-title">Recent Analyses</span><button class="btn btn-ghost btn-sm" onclick="loadRecent()">↻ Refresh</button></div>
+        <div class="card-body" id="recent-list" style="max-height:280px;overflow-y:auto"><div class="empty">No recent analyses</div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══ DETAIL PANEL ═══ -->
+  <div id="detail-panel">
+    <div class="dp-hd">
+      <div id="dp-name" style="font-size:1rem;font-weight:700;margin-bottom:.2rem;padding-right:60px"></div>
+      <div id="dp-dev" style="font-size:.76rem;color:var(--muted)"></div>
+      <button class="dp-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="dp-section">
+      <div class="dp-section-lbl">Location & RERA</div>
+      <div class="dp-row"><span class="dp-key">Locality</span><span class="dp-val" id="dp-loc"></span></div>
+      <div class="dp-row"><span class="dp-key">RERA</span><span class="dp-val" id="dp-rera" style="color:var(--green)"></span></div>
+      <div class="dp-row"><span class="dp-key">Possession</span><span class="dp-val" id="dp-pos"></span></div>
+    </div>
+    <div class="dp-section">
+      <div class="dp-section-lbl">Pricing</div>
+      <div class="dp-row"><span class="dp-key">Min Price</span><span class="dp-val" id="dp-min" style="color:var(--accent)"></span></div>
+      <div class="dp-row"><span class="dp-key">Max Price</span><span class="dp-val" id="dp-max" style="color:var(--accent)"></span></div>
+      <div class="dp-row"><span class="dp-key">₹/sqft</span><span class="dp-val" id="dp-psf"></span></div>
+    </div>
+    <div class="dp-section">
+      <div class="dp-section-lbl">Inventory</div>
+      <div class="dp-row"><span class="dp-key">Total Units</span><span class="dp-val" id="dp-total"></span></div>
+      <div class="dp-row"><span class="dp-key">Booked</span><span class="dp-val" id="dp-booked" style="color:var(--teal)"></span></div>
+      <div class="dp-row"><span class="dp-key">Available</span><span class="dp-val" id="dp-avail" style="color:var(--accent)"></span></div>
+      <div id="dp-abs-wrap" style="margin-top:.65rem;display:none">
+        <div style="font-size:.55rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.25rem">Absorption</div>
+        <div style="height:6px;background:var(--bg4);border-radius:3px;overflow:hidden"><div id="dp-abs-bar" style="height:100%;background:var(--teal);border-radius:3px;transition:width .4s"></div></div>
+        <div id="dp-abs-label" style="font-size:.65rem;color:var(--muted);margin-top:.15rem"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TOAST ═══ -->
+  <div id="toast"></div>
+
+  <!-- ═══ JAVASCRIPT ═══ -->
+  <script>
+    const API = '';
+    const HYDERABAD_CENTER = [17.385, 78.487];
+
+    // ── State ──
+    let _data = null, _projects = [], _localities = {};
+    let _charts = {}, _mapMain = null, _mapInfra = null;
+    let _tileLayers = {};
+    let _projectMarkers = [], _poiLayers = {}, _activeInfraKey = null;
+    let _currentMapMode = 'supply';
+    let _pricingData = null, _liveNewsItems = null;
+    let _supplyPage = 1, _supplyPageSize = 200, _supplyTotalPages = 1, _supplyTotalProjects = 0;
+    let _supplyLocality = '', _supplyCity = 'Hyderabad';
+    let _msFilters = { status: new Set(), segment: new Set() };
+    let _LOC_COORDS = {};
+
+    const labels_infra = { metro:'Metro Station', hospital:'Hospital', school:'School', mall:'Mall', it_company:'IT Park', university:'University', park:'Park / Garden', bus_stop:'Bus Stop', bank:'Bank / ATM', industry:'Industry Hub' };
+    const icons_infra = { metro:'🚇', hospital:'🏥', school:'🏫', mall:'🛍', it_company:'💻', university:'🎓', park:'🌳', bus_stop:'🚌', bank:'🏦', industry:'🏭' };
+
+    // ── Helpers ──
+    function n(v) { if (v == null || v === '') return '—'; return Number(v).toLocaleString('en-IN'); }
+    function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function fmtCr(v) { if (!v) return '—'; const x=parseFloat(v); if (isNaN(x)) return String(v); if (x>=1e7) return '₹'+(x/1e7).toFixed(1)+' Cr'; if (x>=1e5) return '₹'+(x/1e5).toFixed(1)+'L'; return '₹'+x.toLocaleString('en-IN'); }
+    function setEl(id,v) { const e=document.getElementById(id); if (e) e.innerHTML=v; }
+    function show(id) { const e=document.getElementById(id); if (e) e.style.display=''; }
+    function hide(id) { const e=document.getElementById(id); if (e) e.style.display='none'; }
+    function _cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+    function getTheme() { return document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light'; }
+    function statusColor(s) { return {
+      'New Launch':'#3b82f6','Ready to Move':'#0d9488','Under Construction':'#d97706','Pre Launch':'#7c3aed'
+    }[s]||'#94a3b8'; }
+    function scoreInfra(data) { if (!data?.nearest) return 0; const d=data.nearest.dist_m||5000; const c=Math.min(data.count_within_radius||0,20); return Math.round(Math.max(0,100-d/60)+c*2); }
+
+    function setBadge(txt, type) { const e=document.getElementById('tb-badge'); if(!e) return; e.textContent=txt; e.className='badge badge-'+type; }
+    function setBusy(b) { const el=document.getElementById('btn-load'); if(el){el.disabled=b; el.textContent=b?'Loading…':'Load Data';} }
+    function setProgress(pct, doHide=false) { const bar=document.getElementById('prog-bar'); if(!bar)return; if(doHide){bar.style.display='none';bar.style.width='0';return;} bar.style.display='block'; bar.style.width=pct+'%'; }
+    function toast(msg, isErr=false) { const el=document.getElementById('toast'); el.textContent=msg; el.className='show'+(isErr?' err':''); clearTimeout(el._t); el._t=setTimeout(()=>el.className='',3000); }
+
+    // ── Theme ──
+    function toggleTheme() {
+      const next = getTheme()==='dark'?'light':'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      try{localStorage.setItem('mi-theme', next)}catch(_){}
+      document.getElementById('theme-toggle').textContent = next==='dark'?'☽':'☀';
+      _swapMapTiles();
+      if (_data) render(_data);
+    }
+    function _mapTileUrl() { return getTheme()==='dark'?'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png':'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'; }
+    function _addMapTiles(map, key) { if(_tileLayers[key]) map.removeLayer(_tileLayers[key]); _tileLayers[key]=L.tileLayer(_mapTileUrl(),{attribution:'© OSM/Carto',maxZoom:19}).addTo(map); }
+    function _swapMapTiles() { if(_mapMain) _addMapTiles(_mapMain,'main'); if(_mapInfra) _addMapTiles(_mapInfra,'infra'); }
+
+    // ── ECharts ──
+    function getChart(id) { const el=document.getElementById(id); if(!el) return null; if(!_charts[id]) _charts[id]=echarts.init(el,null,{renderer:'svg'}); return _charts[id]; }
+    function _chartTitleStyle() { return {fontSize:12,fontWeight:600,color:_cssVar('--muted'),fontFamily:'inherit'}; }
+    function _chartLegend() { return {textStyle:{color:_cssVar('--muted'),fontSize:11},itemWidth:11,itemHeight:11}; }
+    const ro = new ResizeObserver(()=>Object.values(_charts).forEach(c=>{try{c.resize()}catch(e){}}));
+    ro.observe(document.body);
+
+    // ── Nav ──
+    function toggleNavDropdown(name) {
+      const el = document.getElementById('nav-'+name);
+      const wasOpen = el.classList.contains('open');
+      document.querySelectorAll('.nav-item.open').forEach(n=>n.classList.remove('open'));
+      if (!wasOpen) el.classList.add('open');
+    }
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.nav-item')) document.querySelectorAll('.nav-item.open').forEach(n=>n.classList.remove('open'));
+    });
+
+    // ── Panel switching ──
+    function switchPanel(name) {
+      document.querySelectorAll('.nav-dd-item.active').forEach(d=>d.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+      const panel = document.getElementById('panel-'+name);
+      if (panel) panel.classList.add('active');
+      // Close dropdowns
+      document.querySelectorAll('.nav-item.open').forEach(n=>n.classList.remove('open'));
+      // Maps resize
+      if (name==='overview' && _mapMain) setTimeout(()=>_mapMain.invalidateSize(),60);
+      if (name==='infra' && _mapInfra) setTimeout(()=>_mapInfra.invalidateSize(),60);
+      // Lazy load
+      if (name==='supply' && _data) renderSupplyCharts();
+      if (name==='project-intel' && _data) renderProjectIntelCharts();
+      if (name==='pricing' && _data) loadPricingIntel();
+      if (name==='news') loadLiveNews();
+      if (name==='loc-intel') { const loc=_data?.locality||document.getElementById('sel-loc')?.value||''; loadLocalityIntel(loc); }
+      setTimeout(()=>Object.values(_charts).forEach(c=>{try{c?.resize()}catch(_){}}),80);
+    }
+
+    // ── Auth ──
+    async function doLogout() { await fetch(`${API}/api/auth/logout`,{method:'POST'}); window.location.href='/login'; }
+
+    // ── Init ──
+    document.addEventListener('DOMContentLoaded', async () => {
+      document.getElementById('theme-toggle').textContent = getTheme()==='dark'?'☽':'☀';
+      initMapMain();
+      await loadLocalities();
+      loadRecent();
+    });
+
+    function initMapMain() {
+      if (_mapMain) return;
+      _mapMain = L.map('map-main').setView(HYDERABAD_CENTER, 11);
+      _addMapTiles(_mapMain, 'main');
+    }
+    function initMapInfra() {
+      if (_mapInfra) return;
+      _mapInfra = L.map('map-infra').setView(HYDERABAD_CENTER, 13);
+      _addMapTiles(_mapInfra, 'infra');
+    }
+
+    // ── Localities ──
+    let _allLocalities = []; // flat sorted list for current city
+    let _locHighlightIdx = -1;
+
+    async function loadLocalities() {
+      try {
+        const r = await fetch(`${API}/api/localities-by-city`);
+        const d = await r.json();
+        _localities = d;
+        // Populate city dropdown
+        const citySel = document.getElementById('sel-city');
+        citySel.innerHTML = '';
+        const cities = Object.keys(d).sort((a,b) => {
+          if (a === 'Hyderabad') return -1; if (b === 'Hyderabad') return 1;
+          return (d[b]?.length||0) - (d[a]?.length||0);
+        });
+        cities.forEach(c => {
+          const o = document.createElement('option'); o.value = c;
+          o.textContent = `${c} (${(d[c]||[]).length})`;
+          citySel.appendChild(o);
+        });
+        _rebuildLocalityList();
+      } catch(e) { console.error('localities',e); }
+    }
+
+    function _rebuildLocalityList() {
+      const city = document.getElementById('sel-city').value;
+      const locs = (_localities[city] || []).slice().sort((a,b) => a.localeCompare(b));
+      _allLocalities = locs;
+    }
+
+    function onCityChange() {
+      _rebuildLocalityList();
+      document.getElementById('loc-search').value = '';
+      document.getElementById('sel-loc').value = '';
+      _hideLocResults();
+    }
+
+    function onLocSearchInput() {
+      const q = (document.getElementById('loc-search').value || '').trim().toLowerCase();
+      const box = document.getElementById('loc-results');
+      if (!q) {
+        // Show all (capped at 30)
+        const items = _allLocalities.slice(0, 30);
+        box.innerHTML = items.map(l => `<div class="loc-result-item" onclick="selectLocality('${esc(l)}')">${esc(l)}</div>`).join('')
+          + ((_allLocalities.length > 30) ? `<div class="loc-result-count">${_allLocalities.length} localities — type to filter</div>` : '');
+        box.classList.add('show');
+        _locHighlightIdx = -1;
+        return;
+      }
+      const matches = _allLocalities.filter(l => l.toLowerCase().includes(q));
+      if (!matches.length) {
+        box.innerHTML = '<div class="loc-result-count">No matching localities</div>';
+        box.classList.add('show');
+        return;
+      }
+      box.innerHTML = matches.slice(0, 25).map(l => {
+        const idx = l.toLowerCase().indexOf(q);
+        const hl = esc(l.slice(0,idx)) + '<span class="loc-result-match">' + esc(l.slice(idx, idx+q.length)) + '</span>' + esc(l.slice(idx+q.length));
+        return `<div class="loc-result-item" onclick="selectLocality('${esc(l)}')">${hl}</div>`;
+      }).join('') + (matches.length > 25 ? `<div class="loc-result-count">${matches.length} matches</div>` : '');
+      box.classList.add('show');
+      _locHighlightIdx = -1;
+    }
+
+    function selectLocality(loc) {
+      document.getElementById('loc-search').value = loc;
+      document.getElementById('sel-loc').value = loc;
+      _hideLocResults();
+      loadData();
+    }
+
+    function _hideLocResults() {
+      document.getElementById('loc-results').classList.remove('show');
+    }
+
+    // Keyboard nav for locality search
+    document.addEventListener('keydown', e => {
+      const box = document.getElementById('loc-results');
+      if (!box.classList.contains('show')) return;
+      const items = box.querySelectorAll('.loc-result-item');
+      if (!items.length) return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); _locHighlightIdx = Math.min(_locHighlightIdx+1, items.length-1); _highlightLocItem(items); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); _locHighlightIdx = Math.max(_locHighlightIdx-1, 0); _highlightLocItem(items); }
+      else if (e.key === 'Enter' && _locHighlightIdx >= 0) { e.preventDefault(); items[_locHighlightIdx].onmousedown(); }
+      else if (e.key === 'Escape') { _hideLocResults(); }
+    });
+    function _highlightLocItem(items) {
+      items.forEach((it,i) => it.classList.toggle('highlighted', i === _locHighlightIdx));
+      if (_locHighlightIdx >= 0) items[_locHighlightIdx].scrollIntoView({block:'nearest'});
+    }
+    // Close on outside click — delay to let item click fire first
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.loc-search-wrap')) setTimeout(_hideLocResults, 150);
+    });
+    document.getElementById('loc-search').addEventListener('blur', () => {
+      setTimeout(_hideLocResults, 200);
+    });
+
+    // ── Reset all ──
+    function resetAll() {
+      document.getElementById('loc-search').value = '';
+      document.getElementById('sel-loc').value = '';
+      document.getElementById('f-search') && (document.getElementById('f-search').value = '');
+      document.getElementById('f-sort') && (document.getElementById('f-sort').value = 'name');
+      resetMsFilters();
+      _supplyChartsRendered = false;
+      _piChartsRendered = false;
+      _pricingData = null;
+      _liveNewsItems = null;
+      switchPanel('overview');
+      loadData();
+      toast('Filters reset');
+    }
+
+    // ── Data loading ──
+    async function loadData() {
+      const locality = document.getElementById('sel-loc').value;
+      const city = document.getElementById('sel-city').value;
+      setProgress(20); setBusy(true); setBadge('RUNNING','run');
+      try {
+        setProgress(50);
+        _supplyLocality = locality; _supplyCity = city; _supplyPage = 1;
+        const r = await fetch(`${API}/api/supply`, {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({locality, city, with_infra:!!locality, page:1, page_size:_supplyPageSize})
+        });
+        setProgress(85);
+        if (!r.ok) { const e = await r.json(); throw new Error(e.error||'Server error'); }
+        _data = await r.json();
+        _projects = _data.supply_projects || [];
+        _supplyTotalProjects = _data.meta?.total || _projects.length;
+        _supplyTotalPages = _data.meta?.pages || 1;
+        _pricingData = null;
+        _liveNewsItems = null;
+        _supplyChartsRendered = false;
+        _piChartsRendered = false;
+        resetMsFilters();
+        setProgress(100); setBadge('LOADED','ok');
+        render(_data);
+        setEl('pdf-status', locality ? `Ready — ${locality}, ${city}` : `Ready — ${city}`);
+        // Center map
+        const vp = _projects.filter(p=>p.latitude&&p.longitude&&p.latitude>=17&&p.latitude<=18.2&&p.longitude>=77.8&&p.longitude<=79);
+        if (_mapMain && locality && vp.length) {
+          const clat=vp.reduce((a,p)=>a+p.latitude,0)/vp.length;
+          const clng=vp.reduce((a,p)=>a+p.longitude,0)/vp.length;
+          _mapMain.setView([clat,clng],13);
+        } else if (_mapMain) { _mapMain.setView(HYDERABAD_CENTER,11); }
+        toast(locality ? `Loaded ${_projects.length} projects for ${locality}` : `Loaded ${_projects.length} projects across ${city}`);
+        loadRecent();
+      } catch(e) { setBadge('ERROR','err'); toast('Error: '+e.message, true); }
+      finally { setBusy(false); setTimeout(()=>setProgress(0,true),800); }
+    }
+
+    // ── Render ──
+    function render(data) {
+      const ss = data.supply_summary||{};
+      const projects = data.supply_projects||[];
+      // KPIs
+      setEl('kv-total', n(ss.total_projects||projects.length)||'—');
+      setEl('kv-units', ss.total_units ? n(ss.total_units) : '—');
+      setEl('kv-rera', ss.rera_count!=null ? n(ss.rera_count) : projects.filter(p=>p.rera_id).length||'—');
+      setEl('kv-psf', ss.avg_price_per_sqft ? '₹'+n(ss.avg_price_per_sqft) : '—');
+      if (ss.median_price_per_sqft) setEl('ks-psf', `Median ₹${n(ss.median_price_per_sqft)}`);
+      setEl('kv-gated', ss.gated_projects||'—');
+      setEl('ks-gated', ss.total_projects ? Math.round((ss.gated_projects||0)/ss.total_projects*100)+'% of supply' : '');
+      setEl('kv-abs', ss.absorption_rate_pct!=null ? ss.absorption_rate_pct+'%' : '—');
+      setEl('ks-abs', ss.absorption_project_count ? `From ${n(ss.absorption_project_count)} projects` : '');
+      setEl('kv-nl', (ss.status_distribution||{})['New Launch']||'—');
+      const activeDev = ss.active_developers ?? ss.total_developers ?? Object.keys(ss.builder_distribution||{}).length;
+      const totalDev = ss.total_developers ?? Object.keys(ss.builder_distribution||{}).length;
+      setEl('kv-devs', activeDev||'—');
+      setEl('ks-devs', totalDev ? `${totalDev} total developers` : '');
+      // AI Summary
+      renderAISummary(data, ss, projects);
+      // Charts
+      renderEChartSegment(ss.segment_distribution||{});
+      renderEChartStatus(ss.status_distribution||{});
+      renderEChartPrice(ss.price_distribution||{});
+      renderEChartBHK(ss.config_distribution||{});
+      // Map
+      setMapMode(_currentMapMode);
+      // Supply table
+      setEl('supply-count', `${_data.meta?.total||projects.length} projects`);
+      renderProjectTable(projects);
+      // Infra
+      if (data.infra && Object.keys(data.infra).length) {
+        hide('inf-empty'); show('inf-results');
+        renderInfraTab(data.infra, data.pois||{});
+      } else { show('inf-empty'); hide('inf-results'); }
+    }
+
+    function renderAISummary(data, ss, projects) {
+      const loc = data.locality ? `${data.locality}, ${data.city||'Hyderabad'}` : `${data.city||'Hyderabad'} (All)`;
+      const psf = ss.avg_price_per_sqft||0;
+      const total = ss.total_projects||projects.length||0;
+      const gated = ss.gated_projects||0;
+      const abs = ss.absorption_rate_pct;
+      const topSeg = Object.entries(ss.segment_distribution||{}).sort((a,b)=>b[1]-a[1])[0]?.[0]||'Residential';
+      const topBhk = Object.entries(ss.config_distribution||{}).sort((a,b)=>b[1]-a[1])[0]?.[0]||'3 BHK';
+      const tier = psf>12000?'ultra-premium':psf>8000?'premium':psf>5000?'mid-market':'affordable';
+      const absLabel = abs!=null ? `${abs}% absorption` : 'absorption data unavailable';
+      setEl('ai-text', `${loc} is a <strong>${tier}</strong> micro-market with <strong>${n(total)}</strong> tracked projects and <strong>${gated}</strong> gated communities. Avg PSF <strong>₹${n(psf)}</strong>. ${absLabel}. ${topSeg} dominates with ${topBhk} as the most popular config.`);
+    }
+
+    // ── Charts ──
+    function renderEChartSegment(dist) {
+      const entries = Object.entries(dist).filter(([,v])=>v>0); if(!entries.length) return;
+      const c = getChart('chart-segment'); if(!c) return;
+      c.setOption({
+        tooltip:{trigger:'item',formatter:'{b}: {c} ({d}%)'},
+        legend:{bottom:2,..._chartLegend(),type:'scroll'},
+        series:[{type:'pie',radius:['40%','65%'],center:['50%','48%'],
+          data:entries.map(([n,v])=>({name:n,value:v})),
+          color:['#6366f1','#8b5cf6','#64748b','#0d9488'],
+          label:{show:true,formatter:'{d}%',fontSize:11,fontWeight:700,color:_cssVar('--chart-donut-label')},
+          labelLine:{length:6,length2:4},labelLayout:{hideOverlap:true}}]
+      });
+      setEl('seg-badge', entries.reduce((s,[,v])=>s+v,0)+' projects');
+    }
+    function renderEChartStatus(dist) {
+      const order=['Under Construction','New Launch','Ready to Move','Pre Launch'];
+      const colors={'Under Construction':'#d97706','New Launch':'#3b82f6','Ready to Move':'#0d9488','Pre Launch':'#8b5cf6'};
+      const entries=order.filter(k=>dist[k]).map(k=>[k,dist[k]]); if(!entries.length) return;
+      const c=getChart('chart-status'); if(!c) return;
+      c.setOption({
+        tooltip:{trigger:'item',formatter:'{b}: {c} ({d}%)'},
+        legend:{bottom:2,..._chartLegend(),type:'scroll'},
+        series:[{type:'pie',radius:['40%','65%'],center:['50%','48%'],
+          data:entries.map(([n,v])=>({name:n,value:v,itemStyle:{color:colors[n]||'#94a3b8'}})),
+          label:{show:true,formatter:'{d}%',fontSize:11,fontWeight:700,color:_cssVar('--chart-donut-label')},
+          labelLine:{length:6,length2:4},labelLayout:{hideOverlap:true}}]
+      });
+    }
+    function renderEChartPrice(dist) {
+      const entries=Object.entries(dist||{}).filter(([,v])=>v>0); if(!entries.length) return;
+      const c=getChart('chart-price'); if(!c) return;
+      c.setOption({
+        tooltip:{trigger:'axis'},
+        grid:{top:20,bottom:40,left:10,right:10,containLabel:true},
+        xAxis:{type:'category',data:entries.map(([k])=>k),axisLabel:{color:_cssVar('--chart-axis'),fontSize:10,rotate:25,interval:0}},
+        yAxis:{type:'value',axisLabel:{color:_cssVar('--chart-axis'),fontSize:10},splitLine:{lineStyle:{color:_cssVar('--chart-grid')}}},
+        series:[{type:'bar',data:entries.map(([,v])=>v),itemStyle:{color:'#6366f1',borderRadius:[4,4,0,0]},barMaxWidth:28,label:{show:true,position:'top',fontSize:10,fontWeight:600,color:_cssVar('--chart-label')}}]
+      });
+    }
+    function renderEChartBHK(dist) {
+      const entries=Object.entries(dist||{}).sort((a,b)=>b[1]-a[1]).slice(0,8); if(!entries.length) return;
+      const c=getChart('chart-bhk'); if(!c) return;
+      const colors=['#6366f1','#3b82f6','#0d9488','#d97706','#8b5cf6','#ec4899','#64748b','#22c55e'];
+      c.setOption({
+        tooltip:{trigger:'item',formatter:'{b}: {c} ({d}%)'},
+        legend:{bottom:2,..._chartLegend(),type:'scroll'},
+        series:[{type:'pie',radius:['40%','65%'],center:['50%','48%'],
+          data:entries.map(([n,v],i)=>({name:n,value:v,itemStyle:{color:colors[i%colors.length]}})),
+          label:{show:true,formatter:'{b}\n{d}%',fontSize:10,color:_cssVar('--chart-donut-label')},
+          labelLine:{length:8,length2:6},labelLayout:{hideOverlap:true}}]
+      });
+    }
+
+    // Supply charts (lazy)
+    let _supplyChartsRendered = false;
+    function renderSupplyCharts() {
+      if (_supplyChartsRendered || !_data) return;
+      _supplyChartsRendered = true;
+      const ss = _data.supply_summary||{};
+      const sd = ss.status_distribution||{};
+      const projects = _data.supply_projects||[];
+
+      // Supply KPIs
+      setEl('si-total', n(ss.total_projects||projects.length));
+      setEl('si-uc', n(sd['Under Construction']||0));
+      setEl('si-rtm', n(sd['Ready to Move']||0));
+      setEl('si-nl', n(sd['New Launch']||0));
+      const withUnits = projects.filter(p=>p.total_units&&p.total_units>0);
+      setEl('si-avg-units', withUnits.length ? n(Math.round(withUnits.reduce((s,p)=>s+p.total_units,0)/withUnits.length)) : '—');
+
+      // Inv status chart
+      const c = getChart('chart-inv-status'); if(c) {
+        const entries=Object.entries(sd).filter(([,v])=>v>0);
+        const cols={'Under Construction':'#d97706','New Launch':'#3b82f6','Ready to Move':'#0d9488','Pre Launch':'#8b5cf6'};
+        c.setOption({
+          tooltip:{trigger:'axis'},
+          grid:{top:8,bottom:4,left:4,right:4,containLabel:true},
+          xAxis:{type:'category',data:entries.map(([k])=>k),axisLabel:{color:_cssVar('--chart-axis'),fontSize:9,rotate:15}},
+          yAxis:{type:'value',axisLabel:{color:_cssVar('--chart-axis'),fontSize:9},splitLine:{lineStyle:{color:_cssVar('--chart-grid')}}},
+          series:[{type:'bar',data:entries.map(([k,v])=>({value:v,itemStyle:{color:cols[k]||'#64748b',borderRadius:[4,4,0,0]}})),barMaxWidth:30,label:{show:true,position:'top',fontSize:10,fontWeight:600,color:_cssVar('--chart-label')}}]
+        });
+      }
+      // Price segments
+      const pd=ss.price_distribution||{};
+      const el=document.getElementById('supply-price-seg');
+      if (el && Object.keys(pd).length) {
+        const max=Math.max(...Object.values(pd),1);
+        el.innerHTML=Object.entries(pd).map(([k,v])=>`<div class="dist-row"><div class="dist-label">${k}</div><div class="dist-track"><div class="dist-fill" style="width:${Math.round(v/max*100)}%;background:var(--accent)"></div></div><div class="dist-pct">${v}</div></div>`).join('');
+      }
+      // Supply mix
+      const cd=ss.config_distribution||{};
+      const el2=document.getElementById('supply-mix-body');
+      if (el2 && Object.keys(cd).length) {
+        const max2=Math.max(...Object.values(cd),1);
+        el2.innerHTML=Object.entries(cd).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([k,v])=>`<div class="dist-row"><div class="dist-label">${k}</div><div class="dist-track"><div class="dist-fill" style="width:${Math.round(v/max2*100)}%;background:var(--teal)"></div></div><div class="dist-pct">${v}</div></div>`).join('');
+      }
+      // Segment breakdown chart
+      const segD = ss.segment_distribution||{};
+      const cSeg = getChart('chart-supply-seg');
+      if (cSeg && Object.keys(segD).length) {
+        const entries=Object.entries(segD).filter(([,v])=>v>0);
+        cSeg.setOption({
+          tooltip:{trigger:'axis'},
+          grid:{top:8,bottom:4,left:4,right:4,containLabel:true},
+          xAxis:{type:'category',data:entries.map(([k])=>k),axisLabel:{color:_cssVar('--chart-axis'),fontSize:9}},
+          yAxis:{type:'value',axisLabel:{color:_cssVar('--chart-axis'),fontSize:9},splitLine:{lineStyle:{color:_cssVar('--chart-grid')}}},
+          series:[{type:'bar',data:entries.map(([,v])=>v),itemStyle:{color:'#8b5cf6',borderRadius:[4,4,0,0]},barMaxWidth:40,label:{show:true,position:'top',fontSize:10,fontWeight:600,color:_cssVar('--chart-label')}}]
+        });
+      }
+      // Top localities
+      const locCount={};
+      projects.forEach(p=>{ const loc=p.locality||'Unknown'; locCount[loc]=(locCount[loc]||0)+1; });
+      const topLocs=Object.entries(locCount).sort((a,b)=>b[1]-a[1]).slice(0,10);
+      const locEl=document.getElementById('supply-top-loc');
+      if (locEl && topLocs.length) {
+        const maxL=topLocs[0][1]||1;
+        locEl.innerHTML=topLocs.map(([k,v])=>`<div class="dist-row"><div class="dist-label">${esc(k)}</div><div class="dist-track"><div class="dist-fill" style="width:${Math.round(v/maxL*100)}%;background:var(--blue)"></div></div><div class="dist-pct">${v}</div></div>`).join('');
+      }
+    }
+
+    // Project Intel charts (lazy)
+    let _piChartsRendered = false;
+    function renderProjectIntelCharts() {
+      if (_piChartsRendered || !_data) return;
+      _piChartsRendered = true;
+      const ss = _data.supply_summary||{};
+      const bd = ss.builder_distribution||{};
+      const top = Object.entries(bd).sort((a,b)=>b[1]-a[1]).slice(0,15);
+      // Bar chart
+      const c1 = getChart('chart-dev-bar'); if(c1) {
+        c1.setOption({
+          tooltip:{trigger:'axis'},
+          grid:{top:8,bottom:8,left:10,right:60,containLabel:true},
+          xAxis:{type:'value',axisLabel:{color:_cssVar('--chart-axis'),fontSize:10},splitLine:{lineStyle:{color:_cssVar('--chart-grid')}}},
+          yAxis:{type:'category',data:top.map(([k])=>k.length>22?k.slice(0,22)+'…':k).reverse(),axisLabel:{color:_cssVar('--chart-axis'),fontSize:10},axisLine:{show:false},axisTick:{show:false}},
+          series:[{type:'bar',data:top.map(([,v])=>v).reverse(),itemStyle:{color:'#6366f1',borderRadius:[0,4,4,0]},barMaxWidth:16,label:{show:true,position:'right',fontSize:10,color:_cssVar('--chart-label')}}]
+        });
+      }
+      // Pie
+      const c2 = getChart('chart-dev-pie'); if(c2) {
+        const top5=top.slice(0,5);
+        const rest=top.slice(5).reduce((s,[,v])=>s+v,0);
+        const pieData=[...top5.map(([n,v])=>({name:n.length>18?n.slice(0,18)+'…':n,value:v}))];
+        if(rest>0) pieData.push({name:'Others',value:rest});
+        c2.setOption({
+          tooltip:{trigger:'item',formatter:'{b}: {c} ({d}%)'},
+          legend:{bottom:2,..._chartLegend(),type:'scroll'},
+          series:[{type:'pie',radius:['35%','60%'],center:['50%','46%'],data:pieData,
+            color:['#6366f1','#3b82f6','#0d9488','#d97706','#8b5cf6','#94a3b8'],
+            label:{show:false},emphasis:{label:{show:true,fontSize:12}}}]
+        });
+      }
+      // Lifecycle
+      const c3 = getChart('chart-lifecycle'); if(c3) {
+        const statuses=['Under Construction','New Launch','Ready to Move','Pre Launch'];
+        const segments=[...new Set((_data.supply_projects||[]).map(p=>p.segment||'Unknown'))];
+        const sColors={'Under Construction':'#d97706','New Launch':'#3b82f6','Ready to Move':'#0d9488','Pre Launch':'#8b5cf6'};
+        const series=statuses.map(st=>({
+          name:st,type:'bar',stack:'total',
+          data:segments.map(seg=>(_data.supply_projects||[]).filter(p=>(p.segment||'Unknown')===seg&&p.status===st).length),
+          itemStyle:{color:sColors[st]||'#94a3b8'}
+        }));
+        c3.setOption({
+          tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+          legend:{bottom:2,..._chartLegend()},
+          grid:{top:12,bottom:40,left:10,right:10,containLabel:true},
+          xAxis:{type:'category',data:segments,axisLabel:{color:_cssVar('--chart-axis'),fontSize:10}},
+          yAxis:{type:'value',axisLabel:{color:_cssVar('--chart-axis'),fontSize:10},splitLine:{lineStyle:{color:_cssVar('--chart-grid')}}},
+          series
+        });
+      }
+    }
+
+    // ── Project Table ──
+    function renderProjectTable(projects) {
+      const tbody = document.getElementById('proj-tbody');
+      if (!projects.length) { tbody.innerHTML='<tr><td colspan="10" class="empty">No projects</td></tr>'; return; }
+      tbody.innerHTML = projects.slice(0,200).map((p,i) => {
+        const sc = statusColor(p.status);
+        const bhk = (p.configurations||[]).join(', ')||'—';
+        return `<tr>
+          <td class="name" onclick="openDetail(${i})">${esc(p.project_name)}</td>
+          <td>${esc(p.developer||'—')}</td>
+          <td>${esc(p.segment||'—')}</td>
+          <td><span class="status-pill" style="background:${sc}18;color:${sc}">${esc(p.status||'—')}</span></td>
+          <td>${p.price_per_sqft?'₹'+n(p.price_per_sqft):'—'}</td>
+          <td>${fmtCr(p.min_price)} – ${fmtCr(p.max_price)}</td>
+          <td>${bhk}</td>
+          <td>${p.total_units||'—'}</td>
+          <td>${p.absorption_pct!=null?p.absorption_pct+'%':'—'}</td>
+          <td style="font-size:.6rem;color:var(--green)">${esc(p.rera_id||'—')}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    // ── Filters ──
+    function toggleMs(name) {
+      const wrap = document.getElementById('ms-wrap-'+name);
+      wrap.classList.toggle('open');
+    }
+    function toggleMsOption(group, val) {
+      if (_msFilters[group].has(val)) _msFilters[group].delete(val); else _msFilters[group].add(val);
+      const opt = document.querySelector(`#ms-dropdown-${group} .ms-option[data-val="${val}"]`);
+      if (opt) opt.classList.toggle('selected');
+      const badge = document.getElementById('ms-badge-'+group);
+      if (badge) { badge.textContent=_msFilters[group].size; badge.style.display=_msFilters[group].size?'':'none'; }
+      filterProjects();
+    }
+    function clearMs(group) { _msFilters[group].clear(); document.querySelectorAll(`#ms-dropdown-${group} .ms-option`).forEach(o=>o.classList.remove('selected')); const b=document.getElementById('ms-badge-'+group); if(b){b.style.display='none';} filterProjects(); }
+    function resetMsFilters() { ['status','segment'].forEach(g=>{_msFilters[g].clear();document.querySelectorAll(`#ms-dropdown-${g} .ms-option`).forEach(o=>o.classList.remove('selected'));const b=document.getElementById('ms-badge-'+g);if(b)b.style.display='none';}); }
+    document.addEventListener('click',e=>{ if(!e.target.closest('.ms-wrap')) document.querySelectorAll('.ms-wrap.open').forEach(w=>w.classList.remove('open')); });
+
+    function filterProjects() {
+      if (!_projects.length) return;
+      let filtered = [..._projects];
+      const q = (document.getElementById('f-search')?.value||'').toLowerCase();
+      if (q) filtered=filtered.filter(p=>(p.project_name||'').toLowerCase().includes(q)||(p.developer||'').toLowerCase().includes(q)||(p.locality||'').toLowerCase().includes(q));
+      if (_msFilters.status.size) filtered=filtered.filter(p=>_msFilters.status.has(p.status));
+      if (_msFilters.segment.size) filtered=filtered.filter(p=>_msFilters.segment.has(p.segment));
+      const sort = document.getElementById('f-sort')?.value||'name';
+      if (sort==='price_asc') filtered.sort((a,b)=>(a.min_price||0)-(b.min_price||0));
+      else if (sort==='price_desc') filtered.sort((a,b)=>(b.max_price||0)-(a.max_price||0));
+      else if (sort==='psf_desc') filtered.sort((a,b)=>(b.price_per_sqft||0)-(a.price_per_sqft||0));
+      else if (sort==='absorption') filtered.sort((a,b)=>(b.absorption_pct||0)-(a.absorption_pct||0));
+      else filtered.sort((a,b)=>(a.project_name||'').localeCompare(b.project_name||''));
+      renderProjectTable(filtered);
+      setEl('f-count', `${filtered.length} of ${_projects.length}`);
+    }
+
+    // ── Supply pagination ──
+    async function loadSupplyPage(page) {
+      if (page<1||page>_supplyTotalPages) return;
+      _supplyPage=page; setBusy(true);
+      try {
+        const r = await fetch(`${API}/api/supply`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({locality:_supplyLocality,city:_supplyCity,page,page_size:_supplyPageSize})});
+        if (!r.ok) throw new Error('Page load failed');
+        const d = await r.json();
+        _projects = d.supply_projects||[];
+        _data.supply_projects = _projects;
+        renderProjectTable(_projects);
+        _updateSupplyPagination();
+      } catch(e) { toast('Error: '+e.message,true); }
+      finally { setBusy(false); }
+    }
+    function _updateSupplyPagination() {
+      if (_supplyTotalPages<=1) { hide('supply-pagination'); return; }
+      show('supply-pagination');
+      document.getElementById('supply-pagination').style.display='flex';
+      setEl('supply-page-info', `Page ${_supplyPage} of ${_supplyTotalPages} · ${_supplyTotalProjects} total`);
+      document.getElementById('btn-prev-page').disabled=(_supplyPage<=1);
+      document.getElementById('btn-next-page').disabled=(_supplyPage>=_supplyTotalPages);
+    }
+
+    // ── Map ──
+    function renderMainMap(projects) {
+      if (!_mapMain) return;
+      _projectMarkers.forEach(m=>_mapMain.removeLayer(m)); _projectMarkers=[];
+      const wc = projects.filter(p=>p.latitude&&p.longitude&&p.latitude>=17&&p.latitude<=18.2&&p.longitude>=77.8&&p.longitude<=79);
+      if (!wc.length) return;
+      wc.slice(0,200).forEach((p,i)=>{
+        const S=14,H=Math.round(S*1.45),d2=Math.round(S*.38),o=Math.round((S-d2)/2);
+        const col='#ef4444';
+        const icon=L.divIcon({html:`<div style="position:relative;width:${S}px;height:${H}px"><div style="position:absolute;top:0;left:0;width:${S}px;height:${S}px;background:${col};border-radius:50% 50% 50% 0;transform:rotate(-45deg);transform-origin:50% 100%;border:2px solid rgba(255,255,255,.9);box-shadow:0 2px 6px rgba(0,0,0,.4)"></div><div style="position:absolute;top:${o}px;left:${o}px;width:${d2}px;height:${d2}px;background:rgba(255,255,255,.9);border-radius:50%"></div></div>`,iconSize:[S,H],iconAnchor:[S/2,H],className:''});
+        const mk=L.marker([p.latitude,p.longitude],{icon}).addTo(_mapMain).bindTooltip(`<strong>${p.project_name}</strong><br>${p.developer||''}<br>${p.status} · ${p.price_per_sqft?'₹'+n(p.price_per_sqft)+'/sqft':fmtCr(p.min_price)}`,{sticky:true});
+        mk.on('click',()=>{const idx=_projects.findIndex(x=>x.project_name===p.project_name&&x.locality===p.locality);if(idx>=0)openDetail(idx);});
+        _projectMarkers.push(mk);
+      });
+    }
+    function setMapMode(mode, el) {
+      _currentMapMode=mode;
+      document.querySelectorAll('.map-mode-btn').forEach(b=>b.classList.remove('active'));
+      if(el) el.classList.add('active'); else { const b=document.getElementById('map-mode-'+mode); if(b) b.classList.add('active'); }
+      const leg=document.getElementById('price-heat-legend'); if(leg) leg.remove();
+      if(!_data||!_mapMain) return;
+      const projects=_data.supply_projects||[];
+      if (mode==='supply') { renderMainMap(projects); }
+      else if (mode==='price') {
+        _projectMarkers.forEach(m=>_mapMain.removeLayer(m)); _projectMarkers=[];
+        const wp=projects.filter(p=>p.latitude&&p.longitude&&p.price_per_sqft&&!p.psf_is_estimated&&p.latitude>=17&&p.latitude<=18.2&&p.longitude>=77.8&&p.longitude<=79);
+        if(!wp.length){renderMainMap(projects);return;}
+        const tiers=[{max:5000,col:'#22c55e',label:'≤₹5k'},{max:8000,col:'#eab308',label:'₹5-8k'},{max:12000,col:'#f97316',label:'₹8-12k'},{max:Infinity,col:'#7c3aed',label:'>₹12k'}];
+        const pc=v=>(tiers.find(t=>v<=t.max)||tiers[3]).col;
+        wp.slice(0,200).forEach(p=>{
+          const col=pc(p.price_per_sqft);const S=14,H=Math.round(S*1.45),d2=Math.round(S*.38),o=Math.round((S-d2)/2);
+          const icon=L.divIcon({html:`<div style="position:relative;width:${S}px;height:${H}px"><div style="position:absolute;top:0;left:0;width:${S}px;height:${S}px;background:${col};border-radius:50% 50% 50% 0;transform:rotate(-45deg);transform-origin:50% 100%;border:2px solid rgba(255,255,255,.9);box-shadow:0 2px 6px rgba(0,0,0,.4)"></div><div style="position:absolute;top:${o}px;left:${o}px;width:${d2}px;height:${d2}px;background:rgba(255,255,255,.9);border-radius:50%"></div></div>`,iconSize:[S,H],iconAnchor:[S/2,H],className:''});
+          _projectMarkers.push(L.marker([p.latitude,p.longitude],{icon}).bindTooltip(`<strong>${p.project_name}</strong><br>₹${n(p.price_per_sqft)}/sqft`,{sticky:true}).addTo(_mapMain));
+        });
+      }
+    }
+
+    // ── Infrastructure ──
+    function renderInfraTab(infra, pois) {
+      if (!document.getElementById('map-infra')?.offsetHeight) initMapInfra();
+      else if (!_mapInfra) initMapInfra();
+      // Connectivity score
+      const connEl = document.getElementById('connectivity-score');
+      if (connEl) {
+        const scores=[{key:'metro',label:'Metro',weight:2},{key:'hospital',label:'Hospital',weight:1.5},{key:'school',label:'School',weight:1},{key:'mall',label:'Mall',weight:.8},{key:'it_company',label:'IT Park',weight:1.5},{key:'park',label:'Parks',weight:.8},{key:'bank',label:'Bank',weight:.7}];
+        const tw=scores.reduce((s,x)=>s+x.weight,0);
+        const total=scores.reduce((s,{key,weight})=>s+scoreInfra(infra[key])*weight,0);
+        const avg=Math.round(total/tw);
+        const tier=avg>72?'Excellent':avg>52?'Good':avg>35?'Average':'Below Avg';
+        const sc=avg>72?'var(--teal)':avg>52?'var(--amber)':'var(--red)';
+        connEl.innerHTML=`<div style="font-size:1.8rem;font-weight:800;color:${sc}">${avg}/100</div><div style="font-size:.7rem;color:var(--muted);margin:.3rem 0 .75rem">${tier} Connectivity</div>${scores.map(({key,label})=>{const s=scoreInfra(infra[key]);return`<div class="dist-row"><div class="dist-label">${label}</div><div class="dist-track"><div class="dist-fill" style="width:${s}%;background:${s>60?'var(--teal)':s>35?'var(--amber)':'var(--red)'}"></div></div><div class="dist-pct">${s}</div></div>`}).join('')}`;
+      }
+      // POI lists
+      const mkList=(id,title,items)=>{const el=document.getElementById(id);if(!el)return;if(!items?.length){el.innerHTML='';return;}el.innerHTML=`<div style="font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;margin-bottom:.3rem">${title}</div>`+items.slice(0,8).map(p=>`<div style="display:flex;justify-content:space-between;padding:.25rem 0;font-size:.72rem"><span>${esc(p.name)}</span><span style="color:var(--teal);font-weight:600">${p.dist||''}</span></div>`).join('');};
+      const get=(key)=>infra[key]?.nearby?.length?infra[key].nearby:(pois[key]||[]);
+      mkList('metro-list','Metro Stations',get('metro'));
+      mkList('hospital-list','Hospitals',get('hospital'));
+      mkList('school-list','Schools',get('school'));
+      mkList('it-list','IT Parks',get('it_company'));
+      mkList('park-list','Parks',get('park'));
+      mkList('bank-list','Banks',get('bank'));
+      // Lakes
+      const lakes=infra.lakes||[];
+      const lakesEl=document.getElementById('lakes-body');
+      if(lakesEl){lakesEl.innerHTML=lakes.length?lakes.map(l=>`<div class="dist-row"><div class="dist-label"><strong>${esc(l.name)}</strong></div><div style="margin-left:auto;font-size:.65rem">${l.dist}</div></div>`).join(''):'<div class="empty">No lakes within 5km</div>';}
+      const alertEl=document.getElementById('lake-alert-box');
+      if(alertEl){const inBuf=lakes.filter(l=>l.in_buffer_zone);alertEl.innerHTML=inBuf.length?`<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:var(--r);padding:8px 12px;font-size:.72rem;color:var(--amber);margin:.5rem .75rem .75rem">⚠ <strong>Lake Buffer:</strong> ${inBuf.map(l=>l.name).join(', ')}</div>`:'';}
+      // Nearby places
+      const placesEl=document.getElementById('nearby-places-body');
+      if(placesEl){
+        const pl=[{key:'restaurant',icon:'🍽',label:'Restaurant'},{key:'cafe',icon:'☕',label:'Café'},{key:'pharmacy',icon:'💊',label:'Pharmacy'},{key:'temple',icon:'🛕',label:'Temple'}];
+        const rows=pl.flatMap(({key,icon,label})=>(pois[key]||[]).slice(0,3).map(p=>`<div style="display:flex;align-items:center;gap:.4rem;padding:.3rem 0"><span>${icon}</span><div style="flex:1;min-width:0"><div style="font-size:.72rem;font-weight:500">${esc(p.name)}</div><div style="font-size:.58rem;color:var(--muted)">${label}</div></div><div style="font-size:.6rem;color:var(--teal)">${p.dist}</div></div>`));
+        placesEl.innerHTML=rows.length?rows.join(''):'<div class="empty">No data</div>';
+      }
+      // Radar chart
+      const rc=getChart('chart-infra-radar'); if(rc){
+        const cats=[{key:'metro',label:'Metro'},{key:'hospital',label:'Hospital'},{key:'school',label:'School'},{key:'mall',label:'Mall'},{key:'it_company',label:'IT Park'},{key:'park',label:'Park'},{key:'bank',label:'Bank'}];
+        const vals=cats.map(c=>scoreInfra(infra[c.key]));
+        rc.setOption({
+          tooltip:{trigger:'item'},
+          radar:{indicator:cats.map(c=>({name:c.label,max:100})),shape:'polygon',splitNumber:4,center:['50%','55%'],radius:'60%',
+            axisName:{fontSize:11,color:_cssVar('--chart-axis')},splitLine:{lineStyle:{color:_cssVar('--chart-grid')}},splitArea:{show:false},axisLine:{lineStyle:{color:_cssVar('--chart-grid')}}},
+          series:[{type:'radar',data:[{value:vals,name:'Score'}],itemStyle:{color:'#6366f1'},lineStyle:{color:'#6366f1',width:2},areaStyle:{color:'rgba(99,102,241,.12)'}}]
+        });
+        setTimeout(()=>{try{rc.resize()}catch(e){}},150);
+      }
+      // Map markers — plot all POIs with color coding
+      if (_mapInfra) {
+        // Clear old layers
+        Object.values(_poiLayers).forEach(lg => _mapInfra.removeLayer(lg));
+        _poiLayers = {};
+
+        const infraColors = {
+          metro:'#6366f1', hospital:'#dc2626', school:'#d97706', mall:'#ec4899',
+          it_company:'#2563eb', university:'#8b5cf6', park:'#16a34a',
+          bus_stop:'#64748b', bank:'#0d9488', industry:'#78716c',
+          restaurant:'#f97316', cafe:'#92400e', pharmacy:'#059669', temple:'#a855f7'
+        };
+        const infraEmoji = {
+          metro:'🚇', hospital:'🏥', school:'🏫', mall:'🛍',
+          it_company:'💻', university:'🎓', park:'🌳',
+          bus_stop:'🚌', bank:'🏦', industry:'🏭',
+          restaurant:'🍽', cafe:'☕', pharmacy:'💊', temple:'🛕'
+        };
+
+        // Gather all POI items from infra.nearby + pois
+        const allSources = {...infra};
+        // Also add POI categories
+        Object.keys(pois).forEach(k => { if (!allSources[k]) allSources[k] = {nearby: pois[k]}; });
+
+        let totalMarkers = 0;
+        Object.entries(allSources).forEach(([key, val]) => {
+          const items = val?.nearby?.length ? val.nearby : (pois[key] || []);
+          if (!items.length) return;
+          const col = infraColors[key] || '#64748b';
+          const emoji = infraEmoji[key] || '📍';
+          const lg = L.layerGroup();
+          items.forEach(item => {
+            if (!item.lat || !item.lng) return;
+            const icon = L.divIcon({
+              html: `<div style="width:22px;height:22px;background:${col};border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;font-size:10px">${emoji}</div>`,
+              iconSize: [22, 22], iconAnchor: [11, 11], className: ''
+            });
+            L.marker([item.lat, item.lng], {icon})
+              .bindTooltip(`<strong>${item.name}</strong><br><span style="color:${col}">${labels_infra[key]||key}</span> · ${item.dist||''}`, {sticky:true})
+              .addTo(lg);
+            totalMarkers++;
+          });
+          lg.addTo(_mapInfra);
+          _poiLayers[key] = lg;
+        });
+
+        // Center map
+        const clat=_data?.meta?.centroid_lat; const clng=_data?.meta?.centroid_lng;
+        if(clat&&clng) _mapInfra.setView([clat,clng], 14);
+
+        // Add a legend
+        const existing = document.getElementById('infra-map-legend');
+        if (existing) existing.remove();
+        const legendHtml = Object.entries(infraColors)
+          .filter(([k]) => _poiLayers[k])
+          .map(([k,c]) => `<span style="display:inline-flex;align-items:center;gap:3px;margin:2px 6px;font-size:.6rem;cursor:pointer;opacity:1" data-infra-key="${k}" onclick="toggleInfraLayer('${k}',this)"><span style="width:8px;height:8px;border-radius:50%;background:${c};display:inline-block"></span>${infraEmoji[k]||''} ${(labels_infra[k]||k).replace(/ /g,'&nbsp;')}</span>`)
+          .join('');
+        const legendDiv = document.createElement('div');
+        legendDiv.id = 'infra-map-legend';
+        legendDiv.style.cssText = 'padding:6px 8px;display:flex;flex-wrap:wrap;align-items:center;border-top:1px solid var(--border);background:var(--bg3);border-radius:0 0 var(--r) var(--r)';
+        legendDiv.innerHTML = `<span style="font-size:.55rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-right:6px">${totalMarkers} POIs</span>` + legendHtml;
+        document.getElementById('map-infra')?.parentElement?.appendChild(legendDiv);
+      }
+    }
+
+    function toggleInfraLayer(key, el) {
+      if (!_mapInfra || !_poiLayers[key]) return;
+      if (_mapInfra.hasLayer(_poiLayers[key])) {
+        _mapInfra.removeLayer(_poiLayers[key]);
+        el.style.opacity = '0.3';
+        el.style.textDecoration = 'line-through';
+      } else {
+        _poiLayers[key].addTo(_mapInfra);
+        el.style.opacity = '1';
+        el.style.textDecoration = 'none';
+      }
+    }
+
+    // ── Pricing ──
+    async function loadPricingIntel() {
+      const locality=_data?.locality||document.getElementById('sel-loc')?.value;
+      const city=_data?.city||'Hyderabad';
+      if(!locality||!_data?.supply_projects?.length) { _derivePricingFromProjects(locality||city); return; }
+      if(_pricingData?.locality===locality){renderPricingPanel(_pricingData);return;}
+      try {
+        const r=await fetch(`${API}/api/pricing-intel`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({locality,city})});
+        if(!r.ok) throw new Error('fail');
+        const d=await r.json();
+        const ssAvg=(_data?.supply_summary||{}).avg_price_per_sqft;
+        if(ssAvg) d.market_avg_psf=ssAvg;
+        _pricingData=d; _pricingData.locality=locality;
+        renderPricingPanel(_pricingData);
+      } catch(e){ _derivePricingFromProjects(locality); }
+    }
+    function _derivePricingFromProjects(locality) {
+      if(!_data?.supply_projects?.length) return;
+      const projects=_data.supply_projects;
+      const mktPSF=projects.filter(p=>p.price_per_sqft&&p.price_per_sqft>0).map(p=>p.price_per_sqft);
+      const avg=mktPSF.length?Math.round(mktPSF.reduce((a,b)=>a+b)/mktPSF.length):0;
+      const realPSF=projects.filter(p=>p.price_per_sqft&&p.price_per_sqft>0&&!p.psf_is_estimated).map(p=>p.price_per_sqft);
+      const band=realPSF.length?realPSF:mktPSF;
+      _pricingData={locality:locality||_data.locality,projects,market_avg_psf:(_data?.supply_summary||{}).avg_price_per_sqft||avg,psf_min:band.length?Math.min(...band):0,psf_max:band.length?Math.max(...band):0};
+      renderPricingPanel(_pricingData);
+    }
+    function renderPricingPanel(d) {
+      const projects = d.projects || _data?.supply_projects || [];
+      const psfVals = projects.filter(p=>p.price_per_sqft&&p.price_per_sqft>0&&!p.psf_is_estimated).map(p=>p.price_per_sqft);
+
+      setEl('pi-market-psf', d.market_avg_psf ? '₹'+n(d.market_avg_psf) : '—');
+      setEl('pi-psf-min', d.psf_min ? '₹'+n(d.psf_min) : '—');
+      setEl('pi-psf-max', d.psf_max ? '₹'+n(d.psf_max) : '—');
+
+      // Median
+      if (psfVals.length) {
+        const sorted = [...psfVals].sort((a,b)=>a-b);
+        const mid = Math.floor(sorted.length/2);
+        const median = sorted.length%2 ? sorted[mid] : Math.round((sorted[mid-1]+sorted[mid])/2);
+        setEl('pi-median-psf', '₹'+n(median));
+      }
+      // Spread
+      if (d.psf_min && d.psf_max && d.market_avg_psf) {
+        const spread = d.psf_max - d.psf_min;
+        const spreadPct = Math.round(spread / d.market_avg_psf * 100);
+        setEl('pi-spread', '₹'+n(spread));
+        setEl('pi-spread-sub', spreadPct+'% of avg');
+      }
+
+      // Price band with visual gauge
+      const bandEl = document.getElementById('pi-band');
+      if (bandEl && d.psf_min && d.psf_max) {
+        const avg = d.market_avg_psf || 0;
+        const range = d.psf_max - d.psf_min || 1;
+        const avgPos = Math.round((avg - d.psf_min) / range * 100);
+        bandEl.innerHTML = `
+          <div style="margin-bottom:.85rem">
+            <div style="font-size:.6rem;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:.5rem">PSF Range</div>
+            <div style="position:relative;height:24px;background:linear-gradient(90deg,var(--teal),var(--amber),var(--red));border-radius:12px;margin:.5rem 0">
+              <div style="position:absolute;top:-16px;left:${avgPos}%;transform:translateX(-50%);font-size:.55rem;color:var(--accent);font-weight:700">AVG</div>
+              <div style="position:absolute;top:0;left:${avgPos}%;transform:translateX(-50%);width:3px;height:100%;background:var(--accent);border-radius:2px"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:.65rem"><span style="color:var(--teal);font-weight:600">₹${n(d.psf_min)}</span><span style="color:var(--accent);font-weight:600">₹${n(avg)}</span><span style="color:var(--red);font-weight:600">₹${n(d.psf_max)}</span></div>
+          </div>
+          <div style="border-top:1px solid var(--border);padding-top:.65rem">
+            <div style="font-size:.6rem;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:.4rem">Benchmarks</div>
+            <div class="dist-row"><div class="dist-label">Budget (≤₹5k)</div><div class="dist-pct" style="color:var(--teal)">${projects.filter(p=>p.price_per_sqft&&p.price_per_sqft<=5000).length} projects</div></div>
+            <div class="dist-row"><div class="dist-label">Mid (₹5k–8k)</div><div class="dist-pct" style="color:var(--amber)">${projects.filter(p=>p.price_per_sqft&&p.price_per_sqft>5000&&p.price_per_sqft<=8000).length} projects</div></div>
+            <div class="dist-row"><div class="dist-label">Premium (₹8k–12k)</div><div class="dist-pct" style="color:var(--blue)">${projects.filter(p=>p.price_per_sqft&&p.price_per_sqft>8000&&p.price_per_sqft<=12000).length} projects</div></div>
+            <div class="dist-row"><div class="dist-label">Ultra (>₹12k)</div><div class="dist-pct" style="color:var(--purple)">${projects.filter(p=>p.price_per_sqft&&p.price_per_sqft>12000).length} projects</div></div>
+          </div>`;
+      }
+
+      // Dev comparison chart
+      const byDev = {};
+      projects.forEach(p => { if (!p.developer || !p.price_per_sqft) return; const dev = p.developer.trim(); if (!byDev[dev]) byDev[dev] = []; byDev[dev].push(p.price_per_sqft); });
+      const devAvg = Object.entries(byDev).map(([dev,vals]) => ({dev: dev.length>22 ? dev.slice(0,22)+'…' : dev, avg: Math.round(vals.reduce((a,b)=>a+b)/vals.length), count: vals.length})).sort((a,b)=>b.avg-a.avg).slice(0,10);
+      const c = getChart('chart-pricing-comp');
+      if (c && devAvg.length) { c.setOption({
+        tooltip:{formatter:p=>`<b>${p.name}</b><br/>₹${n(p.value)}/sqft`},
+        grid:{top:8,bottom:8,left:10,right:70,containLabel:true},
+        xAxis:{type:'value',axisLabel:{formatter:v=>'₹'+Math.round(v/1000)+'k',color:_cssVar('--chart-axis'),fontSize:10},splitLine:{lineStyle:{color:_cssVar('--chart-grid')}}},
+        yAxis:{type:'category',data:devAvg.map(d=>d.dev).reverse(),axisLabel:{color:_cssVar('--chart-axis'),fontSize:10},axisLine:{show:false},axisTick:{show:false}},
+        series:[{type:'bar',data:devAvg.map(d=>d.avg).reverse(),itemStyle:{color:'#6366f1',borderRadius:[0,4,4,0]},barMaxWidth:14,label:{show:true,position:'right',color:_cssVar('--chart-label'),fontSize:10,formatter:p=>'₹'+n(p.value)}}]
+      }); }
+
+      // PSF by Segment chart
+      const bySeg = {};
+      projects.forEach(p => { if (!p.segment || !p.price_per_sqft) return; if (!bySeg[p.segment]) bySeg[p.segment]=[]; bySeg[p.segment].push(p.price_per_sqft); });
+      const segData = Object.entries(bySeg).map(([seg,vals])=>({seg, avg:Math.round(vals.reduce((a,b)=>a+b)/vals.length), min:Math.min(...vals), max:Math.max(...vals), count:vals.length})).sort((a,b)=>b.avg-a.avg);
+      const c2 = getChart('chart-psf-segment');
+      if (c2 && segData.length) {
+        c2.setOption({
+          tooltip:{trigger:'axis',formatter:params=>{const d=segData[params[0]?.dataIndex]; return d?`<b>${d.seg}</b><br/>Avg: ₹${n(d.avg)}/sqft<br/>Range: ₹${n(d.min)} – ₹${n(d.max)}<br/>${d.count} projects`:''}},
+          grid:{top:8,bottom:8,left:10,right:50,containLabel:true},
+          xAxis:{type:'value',axisLabel:{formatter:v=>'₹'+Math.round(v/1000)+'k',color:_cssVar('--chart-axis'),fontSize:10},splitLine:{lineStyle:{color:_cssVar('--chart-grid')}}},
+          yAxis:{type:'category',data:segData.map(d=>d.seg).reverse(),axisLabel:{color:_cssVar('--chart-axis'),fontSize:10}},
+          series:[{type:'bar',data:segData.map(d=>d.avg).reverse(),itemStyle:{color:'#0d9488',borderRadius:[0,4,4,0]},barMaxWidth:20,label:{show:true,position:'right',color:_cssVar('--chart-label'),fontSize:10,formatter:p=>'₹'+n(p.value)}}]
+        });
+      }
+
+      // Price Histogram
+      if (psfVals.length > 5) {
+        const c3 = getChart('chart-price-hist');
+        if (c3) {
+          const min = Math.min(...psfVals); const max = Math.max(...psfVals);
+          const bucketSize = Math.max(500, Math.round((max-min)/12/500)*500) || 1000;
+          const buckets = {};
+          psfVals.forEach(v => { const b = Math.floor(v/bucketSize)*bucketSize; buckets[b] = (buckets[b]||0)+1; });
+          const sorted = Object.entries(buckets).sort((a,b)=>Number(a[0])-Number(b[0]));
+          c3.setOption({
+            tooltip:{trigger:'axis',formatter:p=>p[0]?`₹${n(Number(p[0].name))}–₹${n(Number(p[0].name)+bucketSize)}<br/>${p[0].value} projects`:''} ,
+            grid:{top:12,bottom:30,left:10,right:10,containLabel:true},
+            xAxis:{type:'category',data:sorted.map(([k])=>'₹'+Math.round(Number(k)/1000)+'k'),axisLabel:{color:_cssVar('--chart-axis'),fontSize:9,rotate:25}},
+            yAxis:{type:'value',axisLabel:{color:_cssVar('--chart-axis'),fontSize:9},splitLine:{lineStyle:{color:_cssVar('--chart-grid')}}},
+            series:[{type:'bar',data:sorted.map(([k,v])=>({value:v,name:k})),itemStyle:{color:'#8b5cf6',borderRadius:[3,3,0,0]},barMaxWidth:30}]
+          });
+        }
+      }
+
+      // Top projects table
+      const topEl = document.getElementById('pi-top-projects');
+      if (topEl) {
+        const top = projects.filter(p=>p.price_per_sqft&&p.price_per_sqft>0&&!p.psf_is_estimated).sort((a,b)=>b.price_per_sqft-a.price_per_sqft).slice(0,15);
+        if (top.length) {
+          topEl.innerHTML = '<table class="tbl"><thead><tr><th>Project</th><th>Developer</th><th>₹/sqft</th><th>Price Range</th><th>Status</th></tr></thead><tbody>'
+            + top.map(p => `<tr><td style="font-weight:600">${esc(p.project_name)}</td><td>${esc(p.developer||'—')}</td><td style="color:var(--accent);font-weight:700">₹${n(p.price_per_sqft)}</td><td>${fmtCr(p.min_price)} – ${fmtCr(p.max_price)}</td><td><span class="status-pill" style="background:${statusColor(p.status)}18;color:${statusColor(p.status)}">${esc(p.status||'—')}</span></td></tr>`).join('')
+            + '</tbody></table>';
+        } else topEl.innerHTML = '<div class="empty">No PSF data</div>';
+      }
+    }
+
+    // ── News ──
+    async function loadLiveNews(force) {
+      if(_liveNewsItems&&!force){renderNewsPanel();return;}
+      const locality=_data?.locality||document.getElementById('sel-loc')?.value||'';
+      try{const r=await fetch(`${API}/api/news?locality=${encodeURIComponent(locality)}&city=Hyderabad`);const d=await r.json();_liveNewsItems=d.items||[];renderNewsPanel();}catch(e){setEl('news-list','<div class="empty">Could not load news</div>');}
+    }
+    function renderNewsPanel() {
+      const items=_liveNewsItems||[];
+      if(!items.length){setEl('news-list','<div class="empty">No news available</div>');return;}
+      setEl('news-list', items.map(it=>`<a href="${esc(it.link)}" target="_blank" style="text-decoration:none;color:inherit" class="news-item" style="display:block"><div class="news-title">${esc(it.title)}</div><div class="news-desc">${esc(it.desc)}</div><div class="news-meta"><span>${it.pub?new Date(it.pub).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):''}</span></div></a>`).join(''));
+    }
+
+    // ── Locality Intel ──
+    async function loadLocalityIntel(locality) {
+      if(!locality){setEl('loc-intel-body','<div class="empty">Select a locality to see intelligence data</div>');return;}
+      setEl('loc-intel-body','<div class="empty">Loading intelligence for '+esc(locality)+'…</div>');
+      try{
+        const r=await fetch(`${API}/api/project-intel?locality=${encodeURIComponent(locality)}`);
+        const d=await r.json();
+        if(d.error){setEl('loc-intel-body',`<div class="empty">${esc(d.error)}</div>`);return;}
+        renderLocalityIntel(d, locality);
+      }catch(e){setEl('loc-intel-body','<div class="empty">Failed to load locality intel</div>');}
+    }
+
+    function renderLocalityIntel(d, locality) {
+      const el = document.getElementById('loc-intel-body');
+      let html = '';
+
+      // KPI row
+      const cat = d.category_distribution || {};
+      const totalP = Object.values(cat).reduce((s,v)=>s+v,0);
+      const devs = d.developer_rankings || [];
+      const topDev = devs[0]?.developer || '—';
+      html += `<div class="kpi-row anim" style="margin-bottom:.85rem">
+        <div class="kpi"><div class="kpi-val">${n(totalP)}</div><div class="kpi-label">Total Projects</div></div>
+        <div class="kpi"><div class="kpi-val">${Object.keys(cat).length}</div><div class="kpi-label">Segments</div></div>
+        <div class="kpi"><div class="kpi-val">${n(devs.length)}</div><div class="kpi-label">Active Developers</div></div>
+        <div class="kpi"><div class="kpi-val" style="font-size:1rem">${esc(topDev.length>18?topDev.slice(0,18)+'…':topDev)}</div><div class="kpi-label">Top Developer</div></div>
+      </div>`;
+
+      // Category distribution + Developer rankings side by side
+      html += '<div class="g2 anim d1" style="margin-bottom:.85rem">';
+
+      // Category dist
+      html += '<div class="card"><div class="card-hd"><span class="card-title">Category Distribution</span></div><div class="card-body">';
+      if (Object.keys(cat).length) {
+        const maxC = Math.max(...Object.values(cat),1);
+        html += Object.entries(cat).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="dist-row"><div class="dist-label">${esc(k)}</div><div class="dist-track"><div class="dist-fill" style="width:${Math.round(v/maxC*100)}%;background:var(--accent)"></div></div><div class="dist-pct">${v}</div></div>`).join('');
+      } else html += '<div class="empty">No data</div>';
+      html += '</div></div>';
+
+      // Developer rankings table
+      html += '<div class="card"><div class="card-hd"><span class="card-title">Developer Rankings</span><span class="card-badge">by market share</span></div><div class="card-body" style="max-height:300px;overflow-y:auto">';
+      if (devs.length) {
+        html += '<table class="tbl"><thead><tr><th>#</th><th>Developer</th><th>Projects</th><th>Units</th><th>Avg PSF</th><th>Share</th></tr></thead><tbody>';
+        html += devs.slice(0,20).map((dev,i) => `<tr>
+          <td style="color:var(--muted)">${i+1}</td>
+          <td style="font-weight:600">${esc(dev.developer)}</td>
+          <td>${dev.projects}</td>
+          <td>${n(dev.units)}</td>
+          <td>${dev.avg_psf ? '₹'+n(dev.avg_psf) : '—'}</td>
+          <td><span style="color:var(--accent);font-weight:600">${dev.market_share_pct}%</span></td>
+        </tr>`).join('');
+        html += '</tbody></table>';
+      } else html += '<div class="empty">No data</div>';
+      html += '</div></div></div>';
+
+      // Approval stats
+      const ap = d.approval_stats || {};
+      if (ap.total_projects) {
+        html += '<div class="card anim d2" style="margin-bottom:.85rem"><div class="card-hd"><span class="card-title">Approval Status</span><span class="card-badge">'+n(ap.total_projects)+' projects analyzed</span></div><div class="card-body">';
+        const approvalKeys = ['rera','environmental_clearance','fire_noc','municipal_permission','aai_noc'];
+        const approvalLabels = {rera:'RERA',environmental_clearance:'Environmental',fire_noc:'Fire NOC',municipal_permission:'Municipal',aai_noc:'AAI NOC'};
+        html += '<div class="g3" style="gap:.5rem">';
+        approvalKeys.forEach(key => {
+          const s = ap[key];
+          if (!s) return;
+          const pct = s.total ? Math.round(s.approved/s.total*100) : 0;
+          const col = pct > 70 ? 'var(--teal)' : pct > 40 ? 'var(--amber)' : 'var(--red)';
+          html += `<div style="padding:.5rem;border:1px solid var(--border);border-radius:var(--r)">
+            <div style="font-size:.6rem;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;font-weight:600">${approvalLabels[key]||key}</div>
+            <div style="font-size:1.1rem;font-weight:800;color:${col};margin:.1rem 0">${pct}%</div>
+            <div style="height:4px;background:var(--bg4);border-radius:2px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${col};border-radius:2px"></div></div>
+            <div style="font-size:.55rem;color:var(--subtle);margin-top:.2rem">${s.approved}/${s.total} approved</div>
+          </div>`;
+        });
+        html += '</div>';
+        // Market-wide comparison
+        if (ap.market_wide) {
+          html += '<div style="margin-top:.65rem;padding-top:.65rem;border-top:1px solid var(--border)"><div style="font-size:.6rem;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;font-weight:600;margin-bottom:.4rem">vs Market Average</div>';
+          html += approvalKeys.map(key => {
+            const local = ap[key]; const mkt = ap.market_wide[key];
+            if (!local || !mkt || !mkt.total) return '';
+            const localPct = local.total ? Math.round(local.approved/local.total*100) : 0;
+            const mktPct = Math.round(mkt.approved/mkt.total*100);
+            const diff = localPct - mktPct;
+            const diffCol = diff > 0 ? 'var(--teal)' : diff < 0 ? 'var(--red)' : 'var(--muted)';
+            return `<div class="dist-row"><div class="dist-label">${approvalLabels[key]||key}</div><div style="font-size:.65rem;font-weight:600;color:${diffCol};margin-left:auto">${localPct}% <span style="font-size:.55rem;color:var(--muted)">vs ${mktPct}%</span> <span style="font-size:.55rem">${diff>0?'▲':'▼'}${Math.abs(diff)}</span></div></div>`;
+          }).join('');
+          html += '</div>';
+        }
+        html += '</div></div>';
+      }
+
+      el.innerHTML = html;
+    }
+
+    // ── Detail Panel ──
+    function openDetail(idx) {
+      const p=_projects[idx]; if(!p) return;
+      setEl('dp-name',esc(p.project_name));
+      setEl('dp-dev',esc(p.developer||'—'));
+      setEl('dp-loc',esc(p.locality||'—'));
+      setEl('dp-rera',esc(p.rera_id||'—'));
+      setEl('dp-pos',esc(p.possession_date||'—'));
+      setEl('dp-min',fmtCr(p.min_price));
+      setEl('dp-max',fmtCr(p.max_price));
+      setEl('dp-psf',p.price_per_sqft?'₹'+n(p.price_per_sqft)+'/sqft':'—');
+      setEl('dp-total',p.total_units||'—');
+      setEl('dp-booked',p.booked_units||'—');
+      setEl('dp-avail',p.available_units||'—');
+      const absWrap=document.getElementById('dp-abs-wrap');
+      if(p.absorption_pct!=null){absWrap.style.display='';document.getElementById('dp-abs-bar').style.width=p.absorption_pct+'%';setEl('dp-abs-label',p.absorption_pct+'% absorbed');}
+      else{absWrap.style.display='none';}
+      document.getElementById('detail-panel').classList.add('open');
+    }
+    function closeDetail(){document.getElementById('detail-panel').classList.remove('open');}
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDetail();});
+
+    // ── Reports ──
+    async function generateReport() {
+      const locality=document.getElementById('sel-loc').value;
+      const city=document.getElementById('sel-city').value;
+      if(!locality){toast('Select a locality first');return;}
+      toast('Generating report…');
+      try{const r=await fetch(`${API}/api/report-html`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({locality,city})});if(!r.ok) throw new Error('Failed');const html=await r.text();window.open(URL.createObjectURL(new Blob([html],{type:'text/html'})),'_blank');toast('Report opened — Print → Save as PDF');}catch(e){toast('Error: '+e.message,true);}
+    }
+    function exportCSV() {
+      if(!_projects.length){toast('No data loaded');return;}
+      const cols=['project_name','developer','locality','status','segment','min_price','max_price','price_per_sqft','configurations','total_units','booked_units','absorption_pct','rera_id','latitude','longitude'];
+      const csv=[cols.join(','),..._projects.map(p=>cols.map(c=>{let v=p[c];if(Array.isArray(v))v=v.join(';');if(v==null)v='';return `"${String(v).replace(/"/g,'""')}"`;}).join(','))].join('\n');
+      const url=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+      const a=document.createElement('a');a.href=url;a.download=`market_intel_${document.getElementById('sel-loc').value||'all'}_${Date.now()}.csv`;a.click();URL.revokeObjectURL(url);
+      toast('CSV downloaded');
+    }
+
+    async function loadRecent() {
+      try{const r=await fetch(`${API}/api/localities`);const data=await r.json();const el=document.getElementById('recent-list');if(!el)return;if(!Array.isArray(data)||!data.length){el.innerHTML='<div class="empty">No recent analyses</div>';return;}
+      el.innerHTML=data.slice(0,15).map(it=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="document.getElementById('sel-loc').value='${esc(it.locality)}';loadData()"><div style="font-size:.75rem">${esc(it.locality)} <span style="color:var(--muted);font-size:.65rem">/ ${esc(it.city)}</span></div><div style="font-size:.6rem;color:var(--muted)">${it.count?it.count+'p':''}</div></div>`).join('');}catch(e){}
+    }
+  </script>
+</body>
+</html>
