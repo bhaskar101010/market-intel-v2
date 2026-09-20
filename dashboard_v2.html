@@ -897,6 +897,7 @@
       document.getElementById('theme-toggle').textContent = getTheme()==='dark'?'☽':'☀';
       initMapMain();
       await loadLocalities();
+      loadCityOverview();
       loadRecent();
     });
 
@@ -947,6 +948,7 @@
       document.getElementById('loc-search').value = '';
       document.getElementById('sel-loc').value = '';
       _hideLocResults();
+      loadCityOverview();
     }
 
     function onLocSearchInput() {
@@ -1021,12 +1023,62 @@
       _piChartsRendered = false;
       _pricingData = null;
       _liveNewsItems = null;
-      switchPanel('overview');
-      loadData();
+      loadCityOverview();
       toast('Filters reset');
     }
 
-    // ── Data loading ──
+    // ── City-wide overview (lightweight aggregation endpoint) ──
+    async function loadCityOverview() {
+      const city = document.getElementById('sel-city').value;
+      setProgress(20); setBusy(true); setBadge('RUNNING','run');
+      try {
+        setProgress(50);
+        _supplyLocality = ''; _supplyCity = city;
+        const r = await fetch(`${API}/api/city-overview`, {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({city})
+        });
+        setProgress(85);
+        if (!r.ok) { const e = await r.json(); throw new Error(e.error||'Server error'); }
+        const d = await r.json();
+        // Build a compatible _data structure for render()
+        _data = {
+          supply_summary: {
+            total_projects: d.total_projects||0,
+            avg_price_per_sqft: d.avg_psf||0,
+            total_units: d.total_units||0,
+            gated_projects: d.gated_communities||0,
+            absorption_rate_pct: 0,
+            rera_count: d.rera_count||0,
+            active_developers: d.active_developers||0,
+            segment_distribution: d.segment_distribution||{},
+            status_distribution: d.status_distribution||{},
+          },
+          supply_projects: [],
+          infra: {},
+          pois: {},
+          meta: {total: d.total_projects||0},
+        };
+        _projects = [];
+        _supplyTotalProjects = d.total_projects||0;
+        _pricingData = null;
+        _liveNewsItems = null;
+        _supplyChartsRendered = false;
+        _piChartsRendered = false;
+        resetMsFilters();
+        setProgress(100); setBadge('LOADED','ok');
+        switchPanel('overview');
+        render(_data);
+        setEl('overview-summary', `<b>${city}</b> has <b>${(d.total_projects||0).toLocaleString()}</b> tracked projects across <b>${d.active_developers||0}</b> developers. Select a locality for detailed analysis.`);
+        setEl('pdf-status', `Ready — ${city}`);
+        if (_mapMain) { _mapMain.setView(HYDERABAD_CENTER, 11); }
+        toast(`${city} — ${(d.total_projects||0).toLocaleString()} projects`);
+        loadRecent();
+      } catch(e) { setBadge('ERROR','err'); toast('Error: '+e.message, true); }
+      finally { setBusy(false); setTimeout(()=>setProgress(0,true),800); }
+    }
+
+    // ── Data loading (locality-specific, full data with infra) ──
     async function loadData() {
       const locality = document.getElementById('sel-loc').value;
       const city = document.getElementById('sel-city').value;
