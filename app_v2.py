@@ -218,10 +218,13 @@ def city_overview():
     try:
         col = _re()["projects_master"]
         city_re = re_mod.compile(re_mod.escape(city), re_mod.IGNORECASE)
+        # Also match district — e.g. "Rangareddy" in city dropdown matches "Ranga Reddy" in district
+        dist_pattern = re_mod.sub(r'(?i)(reddy|giri|palli|abad)', lambda m: r'\s*' + m.group(), city)
+        dist_re = re_mod.compile(dist_pattern.replace(' ', r'\s*'), re_mod.IGNORECASE)
         if city.lower() == "hyderabad":
             match_q = {"$or": [{"location.city": city_re}, {"location.city": {"$in": [None, ""]}}]}
         else:
-            match_q = {"location.city": city_re}
+            match_q = {"$or": [{"location.city": city_re}, {"location.district": dist_re}]}
 
         pipeline = [
             {"$match": match_q},
