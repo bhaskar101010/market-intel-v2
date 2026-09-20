@@ -2160,11 +2160,12 @@ MONGO_URI = os.environ.get("MONGO_URI", "mongodb://localhost:27017/reddit")
 MONGO_DB_NAME = os.environ.get("MONGO_DB_NAME", "reddit")
 
 _client = None
+import certifi
 
 def _get_client():
     global _client
     if _client is None:
-        _client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=30000)
+        _client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=30000, tlsCAFile=certifi.where())
     return _client
 
 def _db():
