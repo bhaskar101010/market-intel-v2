@@ -36,6 +36,7 @@ import os
 import re
 import math
 import logging
+import certifi
 from collections import defaultdict
 from pymongo import MongoClient
 
@@ -2160,7 +2161,6 @@ MONGO_URI = os.environ.get("MONGO_URI", "mongodb://localhost:27017/reddit")
 MONGO_DB_NAME = os.environ.get("MONGO_DB_NAME", "reddit")
 
 _client = None
-import certifi
 
 def _get_client():
     global _client
