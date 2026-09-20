@@ -1043,6 +1043,8 @@
         const d = await r.json();
         // Build a compatible _data structure for render()
         _data = {
+          locality: '',
+          city: city,
           supply_summary: {
             total_projects: d.total_projects||0,
             avg_price_per_sqft: d.avg_psf||0,
