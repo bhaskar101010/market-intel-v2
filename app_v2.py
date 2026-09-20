@@ -208,6 +208,79 @@ def health():
 # DATA APIs
 # ─────────────────────────────────────────────────────────────────────────────
 
+@app.route("/api/city-overview", methods=["POST"])
+@_login_required
+def city_overview():
+    """Lightweight city-wide summary using aggregation pipeline — fast even on Atlas free tier."""
+    import re as re_mod
+    body = request.get_json() or {}
+    city = body.get("city", "Hyderabad").strip()
+    try:
+        col = _re()["projects_master"]
+        city_re = re_mod.compile(re_mod.escape(city), re_mod.IGNORECASE)
+        if city.lower() == "hyderabad":
+            match_q = {"$or": [{"location.city": city_re}, {"location.city": {"$in": [None, ""]}}]}
+        else:
+            match_q = {"location.city": city_re}
+
+        pipeline = [
+            {"$match": match_q},
+            {"$group": {
+                "_id": None,
+                "total_projects": {"$sum": 1},
+                "total_units": {"$sum": {"$ifNull": [{"$toInt": {"$ifNull": ["$building.total_units", 0]}}, 0]}},
+                "avg_psf": {"$avg": {"$cond": [
+                    {"$gt": [{"$toDouble": {"$ifNull": ["$pricing.price_per_sqft", 0]}}, 0]},
+                    {"$toDouble": "$pricing.price_per_sqft"}, None
+                ]}},
+                "gated": {"$sum": {"$cond": [{"$eq": ["$identity.project_segment", "Gated Community"]}, 1, 0]}},
+                "rera_count": {"$sum": {"$cond": [{"$ne": [{"$ifNull": ["$rera.rera_number", ""]}, ""]}, 1, 0]}},
+                "under_construction": {"$sum": {"$cond": [{"$eq": ["$identity.construction_status", "Under Construction"]}, 1, 0]}},
+                "ready_to_move": {"$sum": {"$cond": [{"$eq": ["$identity.construction_status", "Ready to Move"]}, 1, 0]}},
+                "new_launch": {"$sum": {"$cond": [{"$eq": ["$identity.construction_status", "New Launch"]}, 1, 0]}},
+                "developers": {"$addToSet": "$identity.builder_name"},
+            }}
+        ]
+        result = list(col.aggregate(pipeline, maxTimeMS=15000))
+        if not result:
+            return jsonify({"total_projects": 0, "city": city})
+
+        r = result[0]
+        devs = [d for d in (r.get("developers") or []) if d]
+        segments = {}
+        for seg_doc in col.aggregate([
+            {"$match": match_q},
+            {"$group": {"_id": "$identity.project_segment", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}},
+        ], maxTimeMS=10000):
+            seg_name = seg_doc["_id"] or "Unknown"
+            segments[seg_name] = seg_doc["count"]
+
+        status_dist = {}
+        for st_doc in col.aggregate([
+            {"$match": match_q},
+            {"$group": {"_id": "$identity.construction_status", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}},
+        ], maxTimeMS=10000):
+            st_name = st_doc["_id"] or "Unknown"
+            status_dist[st_name] = st_doc["count"]
+
+        summary = {
+            "city": city,
+            "total_projects": r.get("total_projects", 0),
+            "total_units": r.get("total_units", 0),
+            "avg_psf": round(r["avg_psf"]) if r.get("avg_psf") else 0,
+            "gated_communities": r.get("gated", 0),
+            "rera_count": r.get("rera_count", 0),
+            "active_developers": len(devs),
+            "segment_distribution": segments,
+            "status_distribution": status_dist,
+        }
+        return jsonify(summary)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/supply", methods=["POST"])
 @_login_required
 def supply_from_mongo():
