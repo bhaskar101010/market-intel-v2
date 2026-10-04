@@ -4,3 +4,4 @@ pymongo[srv]>=4.6.0
 gunicorn>=21.2.0
 werkzeug>=3.0.0
 certifi>=2023.0.0
+requests>=2.31.0
